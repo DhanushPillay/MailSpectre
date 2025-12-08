@@ -41,6 +41,21 @@ class EmailChecker:
         r'^\d+@',  # Starting with only numbers
     ]
     
+    # Suspicious keywords commonly found in fraud emails
+    FRAUD_KEYWORDS = {
+        'prince', 'princess', 'barr', 'barrister', 'dr_', 'mallam', 'mrs_', 
+        'mr_', 'madam', 'pastor', 'reverend', 'audit', 'lottery', 'winner',
+        'claim', 'fund', 'inheritance', 'beneficiary', 'urgent', 'confidential',
+        'transfer', 'million', 'attorney', 'bank', 'fbi', 'imf', 'un_', 'wto_'
+    }
+    
+    # Major email providers that shouldn't be flagged even if used in fraud
+    MAJOR_PROVIDERS = {
+        'gmail.com', 'yahoo.com', 'hotmail.com', 'outlook.com', 'live.com',
+        'msn.com', 'aol.com', 'icloud.com', 'protonmail.com', 'mail.com',
+        'yahoo.co.uk', 'yahoo.ca', 'yahoo.fr', 'hotmail.co.uk', 'googlemail.com'
+    }
+    
     def __init__(self):
         """Initialize the email checker."""
         self.dns_resolver = dns.resolver.Resolver()
@@ -69,11 +84,11 @@ class EmailChecker:
                         email = row.get('email', '').strip().lower()
                         if email and '@' in email:
                             fraud_emails.add(email)
-                print(f"✓ Loaded {len(fraud_emails)} fraud emails from database")
+                print(f"[OK] Loaded {len(fraud_emails)} fraud emails from database")
             else:
-                print(f"⚠ Fraud database not found at {data_path}")
+                print(f"[WARNING] Fraud database not found at {data_path}")
         except Exception as e:
-            print(f"⚠ Error loading fraud database: {e}")
+            print(f"[WARNING] Error loading fraud database: {e}")
         return fraud_emails
     
     def _extract_domains_from_fraud(self) -> set:
@@ -110,11 +125,11 @@ class EmailChecker:
                         email = row.get('Email', '').strip().lower()
                         if company and email:
                             companies[email] = company
-                print(f"✓ Loaded {len(companies)} legitimate company emails")
+                print(f"[OK] Loaded {len(companies)} legitimate company emails")
             else:
-                print(f"⚠ Company database not found at {data_path}")
+                print(f"[WARNING] Company database not found at {data_path}")
         except Exception as e:
-            print(f"⚠ Error loading company database: {e}")
+            print(f"[WARNING] Error loading company database: {e}")
         return companies
     
     def validate_format(self, email: str) -> dict:
@@ -336,6 +351,158 @@ class EmailChecker:
                 'details': str(e)
             }
     
+    def check_username_quality(self, email: str) -> dict:
+        """
+        Advanced username analysis based on fraud patterns.
+        Analyzes the local part (username) for characteristics common in fake emails.
+        
+        Args:
+            email: Email address to check
+            
+        Returns:
+            dict: Validation result with status, risk score, and details
+        """
+        try:
+            username = email.split('@')[0].lower()
+            issues = []
+            risk_score = 0  # Higher score = more suspicious
+            
+            # Pattern 1: Very short usernames (1-3 chars) - uncommon for real users
+            if len(username) <= 3:
+                issues.append('Very short username')
+                risk_score += 15
+            
+            # Pattern 2: Very long usernames (20+ chars) - often random
+            elif len(username) >= 20:
+                issues.append('Unusually long username')
+                risk_score += 10
+            
+            # Pattern 3: Random character sequences (like "hkkyi")
+            # Check for low vowel ratio - real names usually have vowels
+            # But skip if contains dots or underscores (likely firstname.lastname format)
+            has_separator = '.' in username or '_' in username
+            vowels = sum(1 for c in username if c in 'aeiou')
+            consonants = sum(1 for c in username if c.isalpha() and c not in 'aeiou')
+            
+            if consonants > 0 and not has_separator:
+                vowel_ratio = vowels / (vowels + consonants)
+                if vowel_ratio < 0.25:  # Less than 25% vowels
+                    issues.append('Low vowel ratio (random-looking)')
+                    risk_score += 20
+            
+            # Pattern 3b: Consecutive consonants (3+ in a row) - uncommon in real names
+            # But exclude common patterns like "nst", "rst", "sch", "str"
+            consonant_sequences = re.findall(r'[bcdfghjklmnpqrstvwxyz]{3,}', username)
+            # Common legitimate consonant clusters in names
+            common_clusters = ['nst', 'rst', 'sch', 'str', 'tch', 'chr', 'phr', 'thr']
+            suspicious_sequences = [seq for seq in consonant_sequences 
+                                   if not any(cluster in seq for cluster in common_clusters)]
+            
+            if suspicious_sequences and not has_separator:
+                issues.append('Multiple consecutive consonants')
+                risk_score += 15
+            
+            # Pattern 4: Excessive numbers at the end (3+ digits)
+            if re.search(r'\d{3,}$', username):
+                issues.append('Multiple numbers at end')
+                risk_score += 15
+            
+            # Pattern 5: Multiple underscores (common in fraud emails)
+            underscore_count = username.count('_')
+            if underscore_count >= 2:
+                issues.append(f'{underscore_count} underscores detected')
+                risk_score += 10 * underscore_count
+            
+            # Pattern 6: Year patterns (2000-2025) often in fraud emails
+            if re.search(r'(19|20)\d{2}', username):
+                issues.append('Contains year pattern')
+                risk_score += 8
+            
+            # Pattern 7: Repeated characters (aaa, 111, etc.)
+            if re.search(r'(.)\1{2,}', username):
+                issues.append('Repeated characters')
+                risk_score += 12
+            
+            # Pattern 8: Common fraud keywords
+            username_lower = username.lower()
+            found_keywords = [kw for kw in self.FRAUD_KEYWORDS if kw in username_lower]
+            if found_keywords:
+                issues.append(f'Fraud keywords: {", ".join(found_keywords[:3])}')
+                risk_score += 25 * len(found_keywords)
+            
+            # Pattern 9: Numbers only or starting with numbers
+            if re.match(r'^\d+$', username):
+                issues.append('Username is only numbers')
+                risk_score += 30
+            elif re.match(r'^\d', username):
+                issues.append('Starts with numbers')
+                risk_score += 10
+            
+            # Pattern 10: Short prefix + numbers (like "ab123", "xy99")
+            if re.match(r'^[a-z]{1,3}\d+$', username):
+                issues.append('Short prefix with numbers pattern')
+                risk_score += 18
+            
+            # Pattern 11: Sequential characters (abc, 123, qwerty)
+            if re.search(r'(abc|123|qwerty|asdf|zxcv)', username):
+                issues.append('Sequential keyboard pattern')
+                risk_score += 20
+            
+            # Pattern 12: Mixed case irregularities (CamelCase without reason)
+            original_username = email.split('@')[0]
+            uppercase_count = sum(1 for c in original_username if c.isupper())
+            if uppercase_count > 0 and not original_username[0].isupper():
+                issues.append('Irregular capitalization')
+                risk_score += 5
+            
+            # Determine validity based on risk score
+            # 0-10: Clean, 11-25: Minor concerns, 26-50: Suspicious, 51+: High risk
+            is_valid = risk_score < 26
+            
+            if risk_score == 0:
+                message = 'Username looks natural'
+                details = 'No suspicious patterns detected in username'
+            elif risk_score <= 10:
+                message = 'Username has minor irregularities'
+                details = f'Issues: {", ".join(issues)} (Risk: {risk_score})'
+            elif risk_score <= 25:
+                message = 'Username has some concerns'
+                details = f'Issues: {", ".join(issues)} (Risk: {risk_score})'
+            elif risk_score <= 50:
+                message = 'Username appears suspicious'
+                details = f'Multiple red flags: {", ".join(issues)} (Risk: {risk_score})'
+            else:
+                message = 'Username has high fraud indicators'
+                details = f'Critical issues: {", ".join(issues)} (Risk: {risk_score})'
+            
+            return {
+                'check': 'username_quality',
+                'valid': is_valid,
+                'risk_score': risk_score,
+                'message': message,
+                'details': details,
+                'issues': issues
+            }
+            
+        except IndexError:
+            return {
+                'check': 'username_quality',
+                'valid': False,
+                'risk_score': 100,
+                'message': 'Invalid email format',
+                'details': 'Cannot extract username from email',
+                'issues': ['Invalid format']
+            }
+        except Exception as e:
+            return {
+                'check': 'username_quality',
+                'valid': True,
+                'risk_score': 0,
+                'message': 'Username analysis error',
+                'details': str(e),
+                'issues': []
+            }
+    
     def check_fraud_database(self, email: str) -> dict:
         """
         Check if email exists in the fraud database.
@@ -369,9 +536,10 @@ class EmailChecker:
                 }
             
             # Check if domain is associated with fraud
+            # Exclude major providers as they're used by everyone
             try:
                 domain = email_lower.split('@')[1]
-                if domain in self.fraud_domains:
+                if domain in self.fraud_domains and domain not in self.MAJOR_PROVIDERS:
                     return {
                         'check': 'fraud_database',
                         'valid': False,
@@ -425,6 +593,7 @@ class EmailChecker:
             self.check_mx_records(email),
             self.check_disposable(email),
             self.check_suspicious_patterns(email),
+            self.check_username_quality(email),  # New advanced check
             self.check_fraud_database(email)
         ]
         
