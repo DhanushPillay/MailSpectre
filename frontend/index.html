@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8"/>
     <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
-    <title>MailSpectre Interface</title>
+    <title>MailSpectre</title>
     <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
     <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&amp;display=swap" rel="stylesheet"/>
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
@@ -50,19 +50,9 @@
             <div class="absolute -bottom-40 -right-40 h-96 w-96 rounded-full bg-accent-blue/50 blur-[150px]"></div>
         </div>
         <div class="relative z-10 w-full max-w-4xl px-4 py-8">
-            <header class="flex items-center justify-between border-b border-solid border-white/10 px-6 py-4">
-                <div class="flex items-center gap-3">
-                    <div class="text-accent-blue size-8">
-                        <svg fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                            <path d="M21.75 6.75v10.5a2.25 2.25 0 0 1-2.25 2.25h-15a2.25 2.25 0 0 1-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0 0 19.5 4.5h-15a2.25 2.25 0 0 0-2.25 2.25m19.5 0v.243a2.25 2.25 0 0 1-1.07 1.916l-7.5 4.615a2.25 2.25 0 0 1-2.36 0L3.32 8.91a2.25 2.25 0 0 1-1.07-1.916V6.75" stroke-linecap="round" stroke-linejoin="round"></path>
-                        </svg>
-                    </div>
-                    <h2 class="text-xl font-bold leading-tight tracking-[-0.015em] text-white">MailSpectre</h2>
-                </div>
-            </header>
             <main class="flex flex-col items-center px-4 py-16 sm:py-24">
                 <div class="text-center">
-                    <h1 class="text-4xl font-bold leading-tight tracking-tighter text-white sm:text-6xl">Email Inspection Protocol</h1>
+                    <h1 class="text-4xl font-bold leading-tight tracking-tighter text-white sm:text-6xl">MailSpectre</h1>
                     <p class="mx-auto mt-6 max-w-2xl text-lg font-normal leading-normal text-white/70">Initiate real-time validation for any email address and receive a detailed status report.</p>
                 </div>
                 <div class="mt-16 w-full max-w-xl">
@@ -95,15 +85,6 @@
                         </div>
                         <div id="checksGrid" class="w-full grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mt-10">
                             <!-- Dynamic Content -->
-                        </div>
-                        
-                        <!-- JSON Output -->
-                        <div class="w-full mt-8 pt-8 border-t border-white/10">
-                            <div class="flex justify-between items-center mb-4">
-                                <h3 class="text-white/70 font-medium">Raw Data</h3>
-                                <button id="copyJsonBtn" class="text-xs bg-white/10 hover:bg-white/20 text-white px-3 py-1 rounded transition-colors">Copy JSON</button>
-                            </div>
-                            <pre id="jsonOutput" class="bg-black/40 p-4 rounded-lg text-xs text-white/60 overflow-x-auto font-mono"></pre>
                         </div>
                     </div>
                 </div>

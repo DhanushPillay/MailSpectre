@@ -13,8 +13,6 @@ const elements = {
     errorSection: document.getElementById('errorSection'),
     overallStatus: document.getElementById('overallStatus'),
     checksGrid: document.getElementById('checksGrid'),
-    jsonOutput: document.getElementById('jsonOutput'),
-    copyJsonBtn: document.getElementById('copyJsonBtn'),
     errorMessage: document.getElementById('errorMessage')
 };
 
@@ -34,9 +32,6 @@ function init() {
             handleValidation();
         }
     });
-    
-    // Copy JSON button
-    elements.copyJsonBtn.addEventListener('click', copyJsonToClipboard);
     
     // Clear input on focus if empty
     elements.emailInput.addEventListener('focus', () => {
@@ -147,9 +142,6 @@ function displayResults(result) {
     // Checks
     displayChecks(result.checks);
     
-    // JSON output
-    elements.jsonOutput.textContent = JSON.stringify(result, null, 2);
-    
     // Scroll to results
     elements.resultsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
@@ -205,31 +197,6 @@ function createCheckCard(check) {
     `;
     
     return card;
-}
-
-/**
- * Copy JSON output to clipboard
- */
-async function copyJsonToClipboard() {
-    try {
-        const jsonText = elements.jsonOutput.textContent;
-        await navigator.clipboard.writeText(jsonText);
-        
-        // Visual feedback
-        const btn = elements.copyJsonBtn;
-        const originalText = btn.textContent;
-        btn.textContent = 'Copied!';
-        btn.classList.add('bg-accent-lime/20', 'text-accent-lime');
-        
-        setTimeout(() => {
-            btn.textContent = originalText;
-            btn.classList.remove('bg-accent-lime/20', 'text-accent-lime');
-        }, 2000);
-        
-    } catch (error) {
-        console.error('Failed to copy:', error);
-        alert('Failed to copy to clipboard');
-    }
 }
 
 /**
