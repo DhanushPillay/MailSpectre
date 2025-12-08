@@ -32,23 +32,40 @@ MailSpectre performs **5 comprehensive validation checks** on every email:
 
 ## 📚 How It Works
 
-The validation process flows through a pipeline of checks:
+MailSpectre uses a multi-layered approach to validate emails without sending a single message. The backend `EmailChecker` class orchestrates these checks in parallel:
 
-```
-User Input → Frontend Validation → API Request → Backend Processing
-                                                        ↓
-                                                  5 Parallel Checks
-                                                        ↓
-                                                  Score Calculation
-                                                        ↓
-                                            JSON Response → Frontend
-                                                        ↓
-                                                 Results Display
-```
+### 1. Syntax & Format Validation
+- **Mechanism:** Uses strict Regular Expressions (Regex) compliant with RFC 5322.
+- **What it checks:** Ensures the email contains valid characters, proper `@` placement, and a valid top-level domain (TLD).
 
-1. **Frontend:** Captures input and sends to Flask API.
-2. **Backend:** The `EmailChecker` class runs parallel validations.
-3. **Response:** Returns a detailed JSON object with a validity score (0-100%).
+### 2. DNS Domain Verification
+- **Mechanism:** Performs a DNS `A` record lookup.
+- **What it checks:** Verifies that the domain name actually exists and resolves to an IP address.
+
+### 3. Mail Server (MX) Verification
+- **Mechanism:** Queries DNS for `MX` (Mail Exchange) records.
+- **What it checks:** Confirms that the domain is configured to receive emails. If no mail server is listed, the email cannot exist.
+
+### 4. Disposable Email Detection
+- **Mechanism:** Checks the domain against a curated blacklist of known temporary email providers (e.g., TempMail, GuerrillaMail).
+- **What it checks:** Prevents users from signing up with throwaway accounts.
+
+### 5. Suspicious Pattern Analysis
+- **Mechanism:** Analyzes the local part (before `@`) for bot-like patterns.
+- **What it checks:** Flags emails like `test12345@`, `qwerty@`, or random character strings often used by bots.
+
+---
+
+## 🚀 Roadmap & Improvements
+
+While MailSpectre is production-ready, there are several areas for potential enhancement:
+
+- [ ] **SMTP Handshake:** Implement deep verification by connecting to the mail server and performing a `RCPT TO` check (without sending data) to verify if the specific mailbox exists.
+- [ ] **Catch-All Detection:** Identify domains that accept all emails (common in business domains) which can give false positives.
+- [ ] **Role-Based Detection:** Flag generic addresses like `admin@`, `support@`, `info@` which are often not personal accounts.
+- [ ] **Result Caching:** Implement Redis to cache validation results for common domains to improve performance.
+- [ ] **Rate Limiting:** Add API rate limiting to prevent abuse of the public endpoint.
+- [ ] **Expanded Blacklist:** Integrate with larger, community-maintained lists of disposable email providers.
 
 ---
 
@@ -72,3 +89,7 @@ User Input → Frontend Validation → API Request → Backend Processing
 **Built with ❤️ for the community**
 
 *MailSpectre - Uncover the truth behind every email address* 👻
+
+**Made BY**
+
+Dhanush Pillay & Shubhangini Dixit
