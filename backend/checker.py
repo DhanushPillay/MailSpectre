@@ -5,6 +5,9 @@ Performs multiple validation checks without using paid APIs.
 
 import re
 import dns.resolver
+import csv
+import os
+from pathlib import Path
 from urllib.parse import urlparse
 
 
@@ -43,6 +46,76 @@ class EmailChecker:
         self.dns_resolver = dns.resolver.Resolver()
         self.dns_resolver.timeout = 5
         self.dns_resolver.lifetime = 5
+        
+        # Load fraud database
+        self.fraud_emails = self._load_fraud_database()
+        self.fraud_domains = self._extract_domains_from_fraud()
+        self.legitimate_companies = self._load_company_database()
+    
+    def _load_fraud_database(self) -> set:
+        """
+        Load known fraud emails from CSV file.
+        
+        Returns:
+            set: Set of known fraudulent email addresses
+        """
+        fraud_emails = set()
+        try:
+            data_path = Path(__file__).parent / 'DATA' / 'fraud.csv'
+            if data_path.exists():
+                with open(data_path, 'r', encoding='utf-8') as f:
+                    reader = csv.DictReader(f)
+                    for row in reader:
+                        email = row.get('email', '').strip().lower()
+                        if email and '@' in email:
+                            fraud_emails.add(email)
+                print(f"✓ Loaded {len(fraud_emails)} fraud emails from database")
+            else:
+                print(f"⚠ Fraud database not found at {data_path}")
+        except Exception as e:
+            print(f"⚠ Error loading fraud database: {e}")
+        return fraud_emails
+    
+    def _extract_domains_from_fraud(self) -> set:
+        """
+        Extract unique domains from fraud emails for pattern matching.
+        
+        Returns:
+            set: Set of domains associated with fraud
+        """
+        domains = set()
+        for email in self.fraud_emails:
+            try:
+                domain = email.split('@')[1]
+                domains.add(domain)
+            except IndexError:
+                continue
+        return domains
+    
+    def _load_company_database(self) -> dict:
+        """
+        Load legitimate company emails from CSV file.
+        
+        Returns:
+            dict: Dictionary mapping company names to email addresses
+        """
+        companies = {}
+        try:
+            data_path = Path(__file__).parent / 'DATA' / 'companies.csv'
+            if data_path.exists():
+                with open(data_path, 'r', encoding='utf-8') as f:
+                    reader = csv.DictReader(f)
+                    for row in reader:
+                        company = row.get('Company Name', '').strip()
+                        email = row.get('Email', '').strip().lower()
+                        if company and email:
+                            companies[email] = company
+                print(f"✓ Loaded {len(companies)} legitimate company emails")
+            else:
+                print(f"⚠ Company database not found at {data_path}")
+        except Exception as e:
+            print(f"⚠ Error loading company database: {e}")
+        return companies
     
     def validate_format(self, email: str) -> dict:
         """
@@ -263,6 +336,67 @@ class EmailChecker:
                 'details': str(e)
             }
     
+    def check_fraud_database(self, email: str) -> dict:
+        """
+        Check if email exists in the fraud database.
+        
+        Args:
+            email: Email address to check
+            
+        Returns:
+            dict: Validation result with status and details
+        """
+        try:
+            email_lower = email.strip().lower()
+            
+            # Check exact match in fraud database
+            if email_lower in self.fraud_emails:
+                return {
+                    'check': 'fraud_database',
+                    'valid': False,
+                    'message': 'Email found in fraud database',
+                    'details': 'This email address is flagged as fraudulent/spam'
+                }
+            
+            # Check if it's a legitimate company email
+            if email_lower in self.legitimate_companies:
+                company = self.legitimate_companies[email_lower]
+                return {
+                    'check': 'fraud_database',
+                    'valid': True,
+                    'message': 'Verified company email',
+                    'details': f'Official email for {company}'
+                }
+            
+            # Check if domain is associated with fraud
+            try:
+                domain = email_lower.split('@')[1]
+                if domain in self.fraud_domains:
+                    return {
+                        'check': 'fraud_database',
+                        'valid': False,
+                        'message': 'Domain associated with fraud',
+                        'details': f'Domain {domain} has known fraudulent activity'
+                    }
+            except IndexError:
+                pass
+            
+            # Not found in either database - neutral result
+            return {
+                'check': 'fraud_database',
+                'valid': True,
+                'message': 'Not in fraud database',
+                'details': 'Email not found in known fraud or verified company lists'
+            }
+            
+        except Exception as e:
+            return {
+                'check': 'fraud_database',
+                'valid': True,  # Assume valid if check fails
+                'message': 'Fraud check error',
+                'details': str(e)
+            }
+    
     def validate_email(self, email: str) -> dict:
         """
         Perform all validation checks on an email address.
@@ -290,7 +424,8 @@ class EmailChecker:
             self.check_domain_exists(email),
             self.check_mx_records(email),
             self.check_disposable(email),
-            self.check_suspicious_patterns(email)
+            self.check_suspicious_patterns(email),
+            self.check_fraud_database(email)
         ]
         
         # Calculate validity score
@@ -300,15 +435,19 @@ class EmailChecker:
         
         # Determine overall validity
         # Email is considered valid if it passes format, domain, and MX checks
-        critical_checks = ['format', 'domain_exists', 'mx_records']
+        critical_checks = ['format', 'domain_exists', 'mx_records', 'fraud_database']
         critical_passed = all(
             check['valid'] for check in checks 
             if check['check'] in critical_checks
         )
         
+        # Extra penalty: if found in fraud database, automatically invalid
+        fraud_check = next((c for c in checks if c['check'] == 'fraud_database'), None)
+        is_fraud = fraud_check and not fraud_check['valid']
+        
         return {
             'email': email,
-            'valid': critical_passed and valid_checks >= 4,  # At least 4 out of 5 checks
+            'valid': critical_passed and valid_checks >= 5 and not is_fraud,  # At least 5 out of 6 checks
             'score': round(score, 2),
             'checks': checks,
             'summary': self._generate_summary(checks, score)

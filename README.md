@@ -14,19 +14,21 @@ MailSpectre is designed to help developers and businesses verify email addresses
 
 ### Key Features
 
-MailSpectre performs **5 comprehensive validation checks** on every email:
+MailSpectre performs **6 comprehensive validation checks** on every email:
 
 1. **📝 Format Validation** - Validates email format using RFC 5322 compliant regex
 2. **🌐 Domain Existence** - Checks if the domain exists via DNS lookup
 3. **📬 MX Records** - Verifies mail servers are properly configured
 4. **🗑️ Disposable Detection** - Identifies temporary/disposable email providers
 5. **🔍 Pattern Analysis** - Detects suspicious patterns in email addresses
+6. **🚨 Fraud Database Check** - Cross-references against 1,300+ known fraudulent emails and verifies legitimate company addresses
 
 ### Additional Highlights
 - **Clean UI:** Modern dark theme interface with real-time results.
 - **Privacy Focused:** No data storage - all checks performed in real-time.
 - **Developer Friendly:** Simple REST API for batch validation.
 - **Zero Cost:** Uses DNS and algorithmic checks, no paid services needed.
+- **Fraud Detection:** Built-in database of known spam/fraud emails and verified company contacts.
 
 ---
 
@@ -54,6 +56,10 @@ MailSpectre uses a multi-layered approach to validate emails without sending a s
 - **Mechanism:** Analyzes the local part (before `@`) for bot-like patterns.
 - **What it checks:** Flags emails like `test12345@`, `qwerty@`, or random character strings often used by bots.
 
+### 6. Fraud Database Check
+- **Mechanism:** Cross-references email against CSV databases of 1,300+ known fraudulent emails and 200+ verified company contacts.
+- **What it checks:** Instantly flags known spam/scam emails and validates legitimate corporate addresses. Also checks if the domain has been associated with fraudulent activity.
+
 ---
 
 ## 🚀 Roadmap & Improvements
@@ -61,10 +67,11 @@ MailSpectre uses a multi-layered approach to validate emails without sending a s
 While MailSpectre is production-ready, here are concrete improvements planned for future versions:
 
 ### Database Integration
-- [ ] **Known Fake Email Database:** Build a SQLite/PostgreSQL database to store and query previously validated fake emails, reducing redundant checks.
+- [x] **Known Fake Email Database:** ✅ **IMPLEMENTED** - CSV database with 1,300+ fraudulent emails and 200+ verified companies.
 - [ ] **Community Reporting System:** Allow users to report fake/spam emails which get added to a shared blocklist after verification.
 - [ ] **Historical Validation Logs:** Store validation history with timestamps to track email reputation over time.
 - [ ] **Blacklist Management Dashboard:** Admin panel to view, add, or remove entries from the disposable/fake email database.
+- [ ] **Migrate to SQL Database:** Move from CSV to SQLite/PostgreSQL for better performance and scalability.
 
 ### Advanced Validation Features
 - [ ] **SMTP Handshake Verification:** Connect to mail servers and perform `RCPT TO` checks to verify if specific mailboxes actually exist (without sending emails).
@@ -105,6 +112,6 @@ While MailSpectre is production-ready, here are concrete improvements planned fo
 
 *MailSpectre - Uncover the truth behind every email address* 👻
 
-**Made BY**
+## Made BY
 
-Shubhangini Dixit & Dhanush Pillay
+**Shubhangini Dixit & Dhanush Pillay**
