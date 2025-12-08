@@ -107,4 +107,4 @@ While MailSpectre is production-ready, here are concrete improvements planned fo
 
 **Made BY**
 
-Dhanush Pillay & Shubhangini Dixit
+Shubhangini Dixit & Dhanush Pillay
