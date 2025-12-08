@@ -7,7 +7,6 @@ MailSpectre is a production-ready email validation tool that checks if an email 
 ![MailSpectre](https://img.shields.io/badge/Status-Production%20Ready-success)
 ![Python](https://img.shields.io/badge/Python-3.11-blue)
 ![Flask](https://img.shields.io/badge/Flask-3.0-green)
-![License](https://img.shields.io/badge/License-MIT-yellow)
 
 ---
 
