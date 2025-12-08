@@ -58,7 +58,6 @@ User Input → Frontend Validation → API Request → Backend Processing
 ## 📖 Documentation
 
 - **[Installation Guide](INSTALLATION.md)** - Setup instructions for local development.
-- **[Deployment Guide](DEPLOYMENT.md)** - How to deploy to Heroku, Render, etc.
 - **[Testing Guide](TESTING.md)** - Unit and integration testing procedures.
 
 ---
