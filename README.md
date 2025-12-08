@@ -1,7 +1,5 @@
 # MailSpectre 👻
 
-**Free Email Validation Service - No Paid APIs Required**
-
 MailSpectre is a production-ready email validation tool that checks if an email address is real or fake using multiple free validation techniques. Built with Python Flask backend and vanilla JavaScript frontend.
 
 ![MailSpectre](https://img.shields.io/badge/Status-Production%20Ready-success)
