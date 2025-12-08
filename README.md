@@ -58,14 +58,29 @@ MailSpectre uses a multi-layered approach to validate emails without sending a s
 
 ## 🚀 Roadmap & Improvements
 
-While MailSpectre is production-ready, there are several areas for potential enhancement:
+While MailSpectre is production-ready, here are concrete improvements planned for future versions:
 
-- [ ] **SMTP Handshake:** Implement deep verification by connecting to the mail server and performing a `RCPT TO` check (without sending data) to verify if the specific mailbox exists.
-- [ ] **Catch-All Detection:** Identify domains that accept all emails (common in business domains) which can give false positives.
-- [ ] **Role-Based Detection:** Flag generic addresses like `admin@`, `support@`, `info@` which are often not personal accounts.
-- [ ] **Result Caching:** Implement Redis to cache validation results for common domains to improve performance.
-- [ ] **Rate Limiting:** Add API rate limiting to prevent abuse of the public endpoint.
-- [ ] **Expanded Blacklist:** Integrate with larger, community-maintained lists of disposable email providers.
+### Database Integration
+- [ ] **Known Fake Email Database:** Build a SQLite/PostgreSQL database to store and query previously validated fake emails, reducing redundant checks.
+- [ ] **Community Reporting System:** Allow users to report fake/spam emails which get added to a shared blocklist after verification.
+- [ ] **Historical Validation Logs:** Store validation history with timestamps to track email reputation over time.
+- [ ] **Blacklist Management Dashboard:** Admin panel to view, add, or remove entries from the disposable/fake email database.
+
+### Advanced Validation Features
+- [ ] **SMTP Handshake Verification:** Connect to mail servers and perform `RCPT TO` checks to verify if specific mailboxes actually exist (without sending emails).
+- [ ] **Catch-All Domain Detection:** Identify domains configured to accept all email addresses (common false positives).
+- [ ] **Role-Based Email Detection:** Flag generic business emails (`admin@`, `support@`, `noreply@`) vs personal accounts.
+- [ ] **Typo Correction:** Suggest corrections for common typos (e.g., `gmial.com` → `gmail.com`).
+
+### Performance & Scalability
+- [ ] **Redis Caching Layer:** Cache validation results for frequently checked domains to reduce API response time.
+- [ ] **Rate Limiting & Throttling:** Implement token bucket or sliding window rate limiting per IP/API key.
+- [ ] **Async Processing Queue:** Use Celery/RQ for handling batch validations asynchronously.
+
+### Data Sources & Intelligence
+- [ ] **Integration with Public Blocklists:** Sync with community-maintained disposable email lists (Stopforumspam, Disposable Email Blocklist).
+- [ ] **Machine Learning Model:** Train an ML classifier on patterns to detect new disposable/fake email services automatically.
+- [ ] **Domain Reputation Score:** Cross-reference domains with spam databases and reputation services.
 
 ---
 
