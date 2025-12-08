@@ -1,8 +1,3 @@
-/**
- * MailSpectre Frontend JavaScript
- * Handles email validation requests and UI updates
- */
-
 // Configuration
 const CONFIG = {
     API_BASE_URL: 'http://localhost:5000',
@@ -14,15 +9,9 @@ const CONFIG = {
 const elements = {
     emailInput: document.getElementById('emailInput'),
     validateBtn: document.getElementById('validateBtn'),
-    btnText: document.querySelector('.btn-text'),
-    btnLoader: document.querySelector('.btn-loader'),
     resultsSection: document.getElementById('resultsSection'),
     errorSection: document.getElementById('errorSection'),
     overallStatus: document.getElementById('overallStatus'),
-    emailDisplay: document.getElementById('emailDisplay'),
-    scoreBar: document.getElementById('scoreBar'),
-    scoreText: document.getElementById('scoreText'),
-    summaryText: document.getElementById('summaryText'),
     checksGrid: document.getElementById('checksGrid'),
     jsonOutput: document.getElementById('jsonOutput'),
     copyJsonBtn: document.getElementById('copyJsonBtn'),
@@ -144,20 +133,16 @@ async function validateEmail(email) {
  */
 function displayResults(result) {
     // Show results section
-    elements.resultsSection.style.display = 'block';
+    elements.resultsSection.classList.remove('hidden');
     
     // Overall status
-    elements.overallStatus.textContent = result.valid ? '✓ Valid' : '✗ Invalid';
-    elements.overallStatus.className = `status-badge ${result.valid ? 'valid' : 'invalid'}`;
-    
-    // Email display
-    elements.emailDisplay.textContent = result.email;
-    
-    // Score
-    displayScore(result.score);
-    
-    // Summary
-    elements.summaryText.textContent = result.summary;
+    if (result.valid) {
+        elements.overallStatus.textContent = 'VALID';
+        elements.overallStatus.className = 'mt-2 text-4xl font-bold text-accent-lime drop-shadow-[0_0_15px_rgba(57,255,20,0.7)]';
+    } else {
+        elements.overallStatus.textContent = 'INVALID';
+        elements.overallStatus.className = 'mt-2 text-4xl font-bold text-accent-red drop-shadow-[0_0_15px_rgba(255,65,54,0.7)]';
+    }
     
     // Checks
     displayChecks(result.checks);
@@ -167,18 +152,6 @@ function displayResults(result) {
     
     // Scroll to results
     elements.resultsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
-}
-
-/**
- * Display validation score
- * @param {number} score - Score percentage
- */
-function displayScore(score) {
-    const scoreClass = score >= 80 ? 'high' : score >= 60 ? 'medium' : 'low';
-    
-    elements.scoreBar.style.width = `${score}%`;
-    elements.scoreBar.className = `score-fill ${scoreClass}`;
-    elements.scoreText.textContent = `${score}%`;
 }
 
 /**
@@ -203,22 +176,32 @@ function displayChecks(checks) {
  */
 function createCheckCard(check) {
     const card = document.createElement('div');
-    card.className = 'check-card';
     
     // Format check name
-    const checkName = check.check.replace(/_/g, ' ');
+    const checkName = check.check.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
     
-    // Determine icon
-    const icon = check.valid ? '✓' : '✗';
-    const statusClass = check.valid ? 'valid' : 'invalid';
+    // Determine styles based on validity
+    const isValid = check.valid;
+    const borderColor = isValid ? 'hover:border-accent-lime/80' : 'hover:border-accent-red/80';
+    const bgColor = isValid ? 'hover:bg-accent-lime/10' : 'hover:bg-accent-red/10';
+    const iconColor = isValid ? 'text-accent-lime' : 'text-accent-red';
+    const iconBg = isValid ? 'bg-accent-lime/20' : 'bg-accent-red/20';
+    const icon = isValid ? 'check' : 'close';
+    const textColor = isValid ? 'text-accent-lime' : 'text-accent-red';
+    
+    card.className = `group relative flex flex-col overflow-hidden rounded-xl border border-white/10 bg-white/5 p-5 transition-all duration-300 ${borderColor} ${bgColor}`;
     
     card.innerHTML = `
-        <div class="check-header">
-            <div class="check-name">${checkName}</div>
-            <div class="check-icon ${statusClass}">${icon}</div>
+        <div class="flex items-start justify-between">
+            <h3 class="font-medium text-white">${checkName}</h3>
+            <div class="flex h-7 w-7 items-center justify-center rounded-full ${iconBg} ${iconColor}">
+                <span class="material-symbols-outlined text-xl">${icon}</span>
+            </div>
         </div>
-        <div class="check-message ${statusClass}">${check.message}</div>
-        <div class="check-details">${check.details}</div>
+        <div class="mt-auto pt-3">
+            <p class="text-sm font-medium ${textColor}">${check.message}</p>
+            <p class="mt-1 text-xs text-white/60">${check.details}</p>
+        </div>
     `;
     
     return card;
@@ -233,13 +216,14 @@ async function copyJsonToClipboard() {
         await navigator.clipboard.writeText(jsonText);
         
         // Visual feedback
-        const originalText = elements.copyJsonBtn.querySelector('.copy-text').textContent;
-        elements.copyJsonBtn.classList.add('copied');
-        elements.copyJsonBtn.querySelector('.copy-text').textContent = 'Copied!';
+        const btn = elements.copyJsonBtn;
+        const originalText = btn.textContent;
+        btn.textContent = 'Copied!';
+        btn.classList.add('bg-accent-lime/20', 'text-accent-lime');
         
         setTimeout(() => {
-            elements.copyJsonBtn.classList.remove('copied');
-            elements.copyJsonBtn.querySelector('.copy-text').textContent = originalText;
+            btn.textContent = originalText;
+            btn.classList.remove('bg-accent-lime/20', 'text-accent-lime');
         }, 2000);
         
     } catch (error) {
@@ -254,22 +238,21 @@ async function copyJsonToClipboard() {
  */
 function showError(message) {
     elements.errorMessage.textContent = message;
-    elements.errorSection.style.display = 'block';
-    elements.errorSection.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    elements.errorSection.classList.remove('hidden');
 }
 
 /**
  * Hide error message
  */
 function hideError() {
-    elements.errorSection.style.display = 'none';
+    elements.errorSection.classList.add('hidden');
 }
 
 /**
  * Hide results section
  */
 function hideResults() {
-    elements.resultsSection.style.display = 'none';
+    elements.resultsSection.classList.add('hidden');
 }
 
 /**
@@ -280,12 +263,13 @@ function setLoadingState(isLoading) {
     elements.validateBtn.disabled = isLoading;
     elements.emailInput.disabled = isLoading;
     
+    const btnSpan = elements.validateBtn.querySelector('span');
     if (isLoading) {
-        elements.btnText.style.display = 'none';
-        elements.btnLoader.style.display = 'inline-block';
+        btnSpan.textContent = 'Inspecting...';
+        elements.validateBtn.classList.add('opacity-75', 'cursor-wait');
     } else {
-        elements.btnText.style.display = 'inline';
-        elements.btnLoader.style.display = 'none';
+        btnSpan.textContent = 'Inspect';
+        elements.validateBtn.classList.remove('opacity-75', 'cursor-wait');
     }
 }
 
@@ -314,12 +298,3 @@ document.addEventListener('DOMContentLoaded', () => {
     init();
     checkBackendHealth();
 });
-
-// Export for testing
-if (typeof module !== 'undefined' && module.exports) {
-    module.exports = {
-        validateEmail,
-        displayResults,
-        createCheckCard
-    };
-}

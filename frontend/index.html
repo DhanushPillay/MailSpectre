@@ -1,141 +1,115 @@
 <!DOCTYPE html>
-<html lang="en">
+<html class="dark" lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="MailSpectre - Free email validation and verification service">
-    <meta name="keywords" content="email validation, email verification, check email, validate email">
-    <title>MailSpectre - Email Validation Tool</title>
-    <link rel="stylesheet" href="styles.css">
+    <meta charset="utf-8"/>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <title>MailSpectre Interface</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&amp;display=swap" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+    <style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 300, 'GRAD' 0, 'opsz' 24
+        }
+    </style>
+    <script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#3671ff",
+                        "background-dark": "#050608",
+                        "accent-lime": "#39FF14",
+                        "accent-blue": "#00C2FF",
+                        "accent-red": "#FF4136",
+                        "accent-yellow": "#ffbf00",
+                    },
+                    fontFamily: {
+                        "display": ["Space Grotesk", "sans-serif"]
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    boxShadow: {
+                        'lime-glow': '0 0 15px rgba(57, 255, 20, 0.3)',
+                        'lime-glow-strong': '0 0 25px rgba(57, 255, 20, 0.5)',
+                    }
+                },
+            },
+        }
+    </script>
 </head>
-<body>
-    <div class="container">
-        <!-- Header Section -->
-        <header class="header">
-            <div class="logo">
-                <span class="logo-icon">👻</span>
-                <h1>MailSpectre</h1>
-            </div>
-            <p class="tagline">Uncover the truth behind every email address</p>
-        </header>
-
-        <!-- Main Content -->
-        <main class="main-content">
-            <!-- Input Section -->
-            <section class="input-section">
-                <div class="input-wrapper">
-                    <input 
-                        type="email" 
-                        id="emailInput" 
-                        class="email-input" 
-                        placeholder="Enter email address to validate..."
-                        autocomplete="off"
-                        spellcheck="false"
-                    >
-                    <button id="validateBtn" class="validate-btn">
-                        <span class="btn-text">Validate Email</span>
-                        <span class="btn-loader" style="display: none;">
-                            <span class="spinner"></span>
-                        </span>
-                    </button>
-                </div>
-                <p class="input-hint">Enter any email address to check its validity and authenticity</p>
-            </section>
-
-            <!-- Results Section -->
-            <section id="resultsSection" class="results-section" style="display: none;">
-                <!-- Email Info Card -->
-                <div class="result-card email-info-card">
-                    <div class="card-header">
-                        <h2>Validation Results</h2>
-                        <div id="overallStatus" class="status-badge"></div>
+<body class="bg-background-dark font-display text-gray-200">
+    <div class="relative flex min-h-screen w-full flex-col items-center overflow-hidden">
+        <div class="absolute inset-0 z-0 opacity-10">
+            <div class="absolute -left-40 -top-40 h-96 w-96 rounded-full bg-accent-lime/50 blur-[150px]"></div>
+            <div class="absolute -bottom-40 -right-40 h-96 w-96 rounded-full bg-accent-blue/50 blur-[150px]"></div>
+        </div>
+        <div class="relative z-10 w-full max-w-4xl px-4 py-8">
+            <header class="flex items-center justify-between border-b border-solid border-white/10 px-6 py-4">
+                <div class="flex items-center gap-3">
+                    <div class="text-accent-blue size-8">
+                        <svg fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M21.75 6.75v10.5a2.25 2.25 0 0 1-2.25 2.25h-15a2.25 2.25 0 0 1-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0 0 19.5 4.5h-15a2.25 2.25 0 0 0-2.25 2.25m19.5 0v.243a2.25 2.25 0 0 1-1.07 1.916l-7.5 4.615a2.25 2.25 0 0 1-2.36 0L3.32 8.91a2.25 2.25 0 0 1-1.07-1.916V6.75" stroke-linecap="round" stroke-linejoin="round"></path>
+                        </svg>
                     </div>
-                    <div class="email-display">
-                        <span class="email-label">Email:</span>
-                        <span id="emailDisplay" class="email-value"></span>
-                    </div>
-                    <div class="score-container">
-                        <div class="score-label">Validation Score</div>
-                        <div class="score-bar">
-                            <div id="scoreBar" class="score-fill"></div>
-                        </div>
-                        <div id="scoreText" class="score-text">0%</div>
-                    </div>
-                    <div id="summaryText" class="summary-text"></div>
+                    <h2 class="text-xl font-bold leading-tight tracking-[-0.015em] text-white">MailSpectre</h2>
                 </div>
-
-                <!-- Checks Grid -->
-                <div class="checks-grid" id="checksGrid">
-                    <!-- Check cards will be dynamically inserted here -->
+            </header>
+            <main class="flex flex-col items-center px-4 py-16 sm:py-24">
+                <div class="text-center">
+                    <h1 class="text-4xl font-bold leading-tight tracking-tighter text-white sm:text-6xl">Email Inspection Protocol</h1>
+                    <p class="mx-auto mt-6 max-w-2xl text-lg font-normal leading-normal text-white/70">Initiate real-time validation for any email address and receive a detailed status report.</p>
                 </div>
-
-                <!-- JSON Output Card -->
-                <div class="result-card json-card">
-                    <div class="card-header">
-                        <h3>JSON Response</h3>
-                        <button id="copyJsonBtn" class="copy-btn" title="Copy JSON">
-                            <span class="copy-icon">📋</span>
-                            <span class="copy-text">Copy</span>
+                <div class="mt-16 w-full max-w-xl">
+                    <div class="flex flex-col items-center gap-3 sm:flex-row">
+                        <label class="flex-1 w-full">
+                            <span class="sr-only">Email Address</span>
+                            <div class="relative">
+                                <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4">
+                                    <svg class="h-5 w-5 text-white/40" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                        <path d="M21.75 6.75v10.5a2.25 2.25 0 0 1-2.25 2.25h-15a2.25 2.25 0 0 1-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0 0 19.5 4.5h-15a2.25 2.25 0 0 0-2.25 2.25m19.5 0v.243a2.25 2.25 0 0 1-1.07 1.916l-7.5 4.615a2.25 2.25 0 0 1-2.36 0L3.32 8.91a2.25 2.25 0 0 1-1.07-1.916V6.75" stroke-linecap="round" stroke-linejoin="round"></path>
+                                    </svg>
+                                </div>
+                                <input id="emailInput" class="form-input flex h-14 w-full min-w-0 flex-1 resize-none overflow-hidden rounded-xl border border-white/10 bg-black/30 p-4 pl-12 text-base font-normal leading-normal text-white/90 placeholder:text-white/40 transition-all duration-300 focus:border-accent-blue focus:outline-none focus:ring-2 focus:ring-accent-blue/50" placeholder="user@example.com" type="email" value=""/>
+                            </div>
+                        </label>
+                        <button id="validateBtn" class="flex h-14 w-full min-w-[84px] cursor-pointer items-center justify-center overflow-hidden rounded-xl bg-accent-lime px-6 text-base font-bold leading-normal tracking-wide text-black shadow-lime-glow transition-all duration-300 hover:bg-white hover:shadow-lime-glow-strong sm:w-auto">
+                            <span class="truncate">Inspect</span>
                         </button>
                     </div>
-                    <pre id="jsonOutput" class="json-output"></pre>
+                    <div id="errorSection" class="mt-4 hidden">
+                        <p id="errorMessage" class="text-accent-red text-center"></p>
+                    </div>
                 </div>
-            </section>
-
-            <!-- Error Section -->
-            <section id="errorSection" class="error-section" style="display: none;">
-                <div class="error-card">
-                    <div class="error-icon">⚠️</div>
-                    <h3 class="error-title">Validation Error</h3>
-                    <p id="errorMessage" class="error-message"></p>
+                
+                <div id="resultsSection" class="w-full max-w-4xl mt-20 hidden">
+                    <div class="flex flex-col items-center gap-8 rounded-2xl border border-white/10 bg-black/20 p-6 shadow-2xl backdrop-blur-sm sm:p-10">
+                        <div class="text-center">
+                            <p class="text-sm font-medium uppercase tracking-widest text-white/50">Final Status</p>
+                            <p id="overallStatus" class="mt-2 text-4xl font-bold text-accent-red drop-shadow-[0_0_15px_rgba(255,65,54,0.7)]">INVALID</p>
+                        </div>
+                        <div id="checksGrid" class="w-full grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mt-10">
+                            <!-- Dynamic Content -->
+                        </div>
+                        
+                        <!-- JSON Output -->
+                        <div class="w-full mt-8 pt-8 border-t border-white/10">
+                            <div class="flex justify-between items-center mb-4">
+                                <h3 class="text-white/70 font-medium">Raw Data</h3>
+                                <button id="copyJsonBtn" class="text-xs bg-white/10 hover:bg-white/20 text-white px-3 py-1 rounded transition-colors">Copy JSON</button>
+                            </div>
+                            <pre id="jsonOutput" class="bg-black/40 p-4 rounded-lg text-xs text-white/60 overflow-x-auto font-mono"></pre>
+                        </div>
+                    </div>
                 </div>
-            </section>
-        </main>
-
-        <!-- Features Section -->
-        <section class="features-section">
-            <h2 class="features-title">How It Works</h2>
-            <div class="features-grid">
-                <div class="feature-item">
-                    <div class="feature-icon">📝</div>
-                    <h3>Format Validation</h3>
-                    <p>Checks if email follows RFC 5322 standard format</p>
-                </div>
-                <div class="feature-item">
-                    <div class="feature-icon">🌐</div>
-                    <h3>Domain Check</h3>
-                    <p>Verifies domain exists via DNS lookup</p>
-                </div>
-                <div class="feature-item">
-                    <div class="feature-icon">📬</div>
-                    <h3>MX Records</h3>
-                    <p>Confirms mail servers are configured</p>
-                </div>
-                <div class="feature-item">
-                    <div class="feature-icon">🗑️</div>
-                    <h3>Disposable Detection</h3>
-                    <p>Identifies temporary email providers</p>
-                </div>
-                <div class="feature-item">
-                    <div class="feature-icon">🔍</div>
-                    <h3>Pattern Analysis</h3>
-                    <p>Detects suspicious patterns in addresses</p>
-                </div>
-                <div class="feature-item">
-                    <div class="feature-icon">✅</div>
-                    <h3>Complete Report</h3>
-                    <p>Get detailed JSON validation results</p>
-                </div>
-            </div>
-        </section>
-
-        <!-- Footer -->
-        <footer class="footer">
-            <p>&copy; 2025 MailSpectre. Free email validation service.</p>
-            <p class="footer-note">No data is stored. All checks are performed in real-time.</p>
-        </footer>
+            </main>
+        </div>
     </div>
-
     <script src="script.js"></script>
 </body>
 </html>
