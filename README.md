@@ -112,6 +112,8 @@ While MailSpectre is production-ready, here are concrete improvements planned fo
 
 *MailSpectre - Uncover the truth behind every email address* 👻
 
+---
+
 ## Made BY
 
 **Shubhangini Dixit & Dhanush Pillay**
