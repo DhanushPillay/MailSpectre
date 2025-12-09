@@ -1,34 +1,24 @@
 """
 Vercel serverless function handler for MailSpectre backend
+Minimal version to debug deployment issues
 """
 from flask import Flask, request, jsonify
-from flask_cors import CORS
-import sys
-import os
 import re
 
 # Create Flask app
 app = Flask(__name__)
-CORS(app)
 
-# Try to import the full checker, fall back to basic validation
-checker = None
-import_error = None
-
-try:
-    # Add backend directory to Python path
-    api_dir = os.path.dirname(os.path.abspath(__file__))
-    backend_path = os.path.abspath(os.path.join(api_dir, '..', 'backend'))
-    sys.path.insert(0, backend_path)
-    
-    from checker import EmailChecker
-    checker = EmailChecker()
-except Exception as e:
-    import_error = str(e)
+# Add CORS headers manually to avoid flask-cors dependency issues
+@app.after_request
+def add_cors_headers(response):
+    response.headers['Access-Control-Allow-Origin'] = '*'
+    response.headers['Access-Control-Allow-Methods'] = 'GET, POST, OPTIONS'
+    response.headers['Access-Control-Allow-Headers'] = 'Content-Type'
+    return response
 
 
 def basic_validate(email):
-    """Basic email validation fallback"""
+    """Basic email validation"""
     result = {
         'valid': False,
         'email': email,
@@ -63,14 +53,7 @@ def validate_email():
             return jsonify({'valid': False, 'error': 'Email is required', 'checks': {}}), 400
         
         email = data['email'].strip()
-        
-        # Use full checker if available, otherwise basic validation
-        if checker:
-            result = checker.validate(email)
-        else:
-            result = basic_validate(email)
-            result['warning'] = f'Using basic validation. Full checker unavailable: {import_error}'
-        
+        result = basic_validate(email)
         return jsonify(result)
     except Exception as e:
         return jsonify({
@@ -82,13 +65,8 @@ def validate_email():
 
 @app.route('/api/health', methods=['GET'])
 def health():
-    return jsonify({
-        'status': 'ok' if checker else 'fallback',
-        'checker_loaded': checker is not None,
-        'error': import_error,
-        'python_path': sys.path[:3]
-    })
+    return jsonify({'status': 'ok', 'message': 'Basic validation only'})
 
 
-# For Vercel
-handler = app
+# For Vercel - must be named 'app'
+# Vercel Python runtime expects the WSGI app to be named 'app'
