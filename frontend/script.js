@@ -1,7 +1,7 @@
 // Configuration
 const CONFIG = {
-    // Use relative path for Vercel deployment (same domain for frontend and backend)
-    API_BASE_URL: window.location.hostname === 'localhost' ? 'http://localhost:5000' : '',
+    // Use Render for backend API
+    API_BASE_URL: window.location.hostname === 'localhost' ? 'http://localhost:5000' : 'https://mailspectre-api.onrender.com',
     API_ENDPOINT: '/api/validate',
     REQUEST_TIMEOUT: 10000
 };
