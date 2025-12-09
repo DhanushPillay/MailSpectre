@@ -1,6 +1,7 @@
 // Configuration
 const CONFIG = {
-    API_BASE_URL: 'http://localhost:5000',
+    // Use relative path for Vercel deployment (same domain for frontend and backend)
+    API_BASE_URL: window.location.hostname === 'localhost' ? 'http://localhost:5000' : '',
     API_ENDPOINT: '/api/validate',
     REQUEST_TIMEOUT: 10000
 };
