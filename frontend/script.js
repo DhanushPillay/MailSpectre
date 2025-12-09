@@ -61,6 +61,22 @@ async function handleValidation() {
     setLoadingState(true);
     
     try {
+        // Check if backend is running first
+        const isBackendRunning = await checkBackendHealth();
+        
+        if (!isBackendRunning) {
+            // Show helpful error message with instructions
+            showError(`🚨 Backend server is not running!
+            
+📝 To start the backend:
+1. Open a terminal
+2. Navigate to: E:\\Personal Projects\\MailSpectre\\backend
+3. Run: python app.py
+
+The server should start on http://localhost:5000`);
+            return;
+        }
+        
         // Make API request
         const result = await validateEmail(email);
         
@@ -72,7 +88,17 @@ async function handleValidation() {
         
     } catch (error) {
         console.error('Validation error:', error);
-        showError(error.message || 'An error occurred during validation');
+        
+        // Better error message for connection issues
+        if (error.message.includes('connect') || error.message.includes('fetch')) {
+            showError(`❌ Cannot connect to backend server.
+            
+Please start the backend by running:
+cd "E:\\Personal Projects\\MailSpectre\\backend"
+python app.py`);
+        } else {
+            showError(error.message || 'An error occurred during validation');
+        }
     } finally {
         setLoadingState(false);
     }
@@ -349,16 +375,36 @@ async function checkBackendHealth() {
     try {
         const response = await fetch(`${CONFIG.API_BASE_URL}/api/health`, {
             method: 'GET',
-            signal: AbortSignal.timeout(3000)
+            signal: AbortSignal.timeout(2000)
         });
         
         if (response.ok) {
             console.log('✓ Backend is running');
+            updateBackendStatus(true);
             return true;
         }
-    } catch (error) {
-        console.warn('⚠ Backend is not responding. Make sure to start the Flask server.');
+        updateBackendStatus(false);
         return false;
+    } catch (error) {
+        console.warn('⚠ Backend is not responding.');
+        updateBackendStatus(false);
+        return false;
+    }
+}
+
+/**
+ * Update backend status indicator
+ */
+function updateBackendStatus(isRunning) {
+    const statusIndicator = document.getElementById('backendStatus');
+    if (statusIndicator) {
+        if (isRunning) {
+            statusIndicator.innerHTML = '🟢 Backend Online';
+            statusIndicator.className = 'text-xs text-accent-lime';
+        } else {
+            statusIndicator.innerHTML = '🔴 Backend Offline';
+            statusIndicator.className = 'text-xs text-accent-red';
+        }
     }
 }
 
@@ -366,4 +412,7 @@ async function checkBackendHealth() {
 document.addEventListener('DOMContentLoaded', () => {
     init();
     checkBackendHealth();
+    
+    // Check backend status every 10 seconds
+    setInterval(checkBackendHealth, 10000);
 });
