@@ -1,31 +1,65 @@
 """
 Vercel serverless function handler for MailSpectre backend
 """
+from flask import Flask, request, jsonify
+from flask_cors import CORS
 import sys
 import os
 
-# Add backend directory to Python path
-backend_path = os.path.join(os.path.dirname(__file__), '..', 'backend')
-sys.path.insert(0, backend_path)
+# Create Flask app first
+app = Flask(__name__)
+CORS(app)
 
-# Change working directory to backend so DATA folder is accessible
-os.chdir(backend_path)
+# Try to import the checker
+checker = None
+import_error = None
 
 try:
-    from app import app
-    # Vercel expects a variable named 'app' or 'handler'
-    handler = app
-except Exception as e:
-    # If import fails, create a minimal error handler
-    from flask import Flask, jsonify
-    app = Flask(__name__)
+    # Add backend directory to Python path
+    backend_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'backend')
+    sys.path.insert(0, backend_path)
     
-    @app.route('/api/validate', methods=['POST', 'GET', 'OPTIONS'])
-    def error_handler():
+    # Import checker
+    from checker import EmailChecker
+    checker = EmailChecker()
+except Exception as e:
+    import_error = str(e)
+
+@app.route('/api/validate', methods=['POST', 'OPTIONS'])
+def validate_email():
+    # Handle preflight
+    if request.method == 'OPTIONS':
+        return '', 204
+    
+    # Check if checker loaded
+    if checker is None:
         return jsonify({
             'valid': False,
-            'error': f'Backend initialization failed: {str(e)}',
+            'error': f'Backend initialization error: {import_error}',
             'checks': {}
         }), 500
     
-    handler = app
+    try:
+        data = request.get_json()
+        if not data or 'email' not in data:
+            return jsonify({'valid': False, 'error': 'Email is required', 'checks': {}}), 400
+        
+        email = data['email'].strip()
+        result = checker.validate(email)
+        return jsonify(result)
+    except Exception as e:
+        return jsonify({
+            'valid': False,
+            'error': f'Validation error: {str(e)}',
+            'checks': {}
+        }), 500
+
+@app.route('/api/health', methods=['GET'])
+def health():
+    return jsonify({
+        'status': 'ok' if checker else 'error',
+        'error': import_error
+    })
+
+# Vercel handler
+handler = app
