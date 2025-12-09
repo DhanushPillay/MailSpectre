@@ -5,39 +5,57 @@ from flask import Flask, request, jsonify
 from flask_cors import CORS
 import sys
 import os
+import re
 
-# Create Flask app first
+# Create Flask app
 app = Flask(__name__)
 CORS(app)
 
-# Try to import the checker
+# Try to import the full checker, fall back to basic validation
 checker = None
 import_error = None
 
 try:
     # Add backend directory to Python path
-    backend_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'backend')
+    api_dir = os.path.dirname(os.path.abspath(__file__))
+    backend_path = os.path.abspath(os.path.join(api_dir, '..', 'backend'))
     sys.path.insert(0, backend_path)
     
-    # Import checker
     from checker import EmailChecker
     checker = EmailChecker()
 except Exception as e:
     import_error = str(e)
 
+
+def basic_validate(email):
+    """Basic email validation fallback"""
+    result = {
+        'valid': False,
+        'email': email,
+        'checks': {}
+    }
+    
+    # Basic format check
+    email_regex = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
+    if re.match(email_regex, email):
+        result['valid'] = True
+        result['checks']['format'] = {
+            'passed': True,
+            'message': 'Valid email format'
+        }
+    else:
+        result['checks']['format'] = {
+            'passed': False,
+            'message': 'Invalid email format'
+        }
+    
+    return result
+
+
 @app.route('/api/validate', methods=['POST', 'OPTIONS'])
 def validate_email():
-    # Handle preflight
     if request.method == 'OPTIONS':
         return '', 204
-    
-    # Check if checker loaded
-    if checker is None:
-        return jsonify({
-            'valid': False,
-            'error': f'Backend initialization error: {import_error}',
-            'checks': {}
-        }), 500
     
     try:
         data = request.get_json()
@@ -45,21 +63,32 @@ def validate_email():
             return jsonify({'valid': False, 'error': 'Email is required', 'checks': {}}), 400
         
         email = data['email'].strip()
-        result = checker.validate(email)
+        
+        # Use full checker if available, otherwise basic validation
+        if checker:
+            result = checker.validate(email)
+        else:
+            result = basic_validate(email)
+            result['warning'] = f'Using basic validation. Full checker unavailable: {import_error}'
+        
         return jsonify(result)
     except Exception as e:
         return jsonify({
             'valid': False,
-            'error': f'Validation error: {str(e)}',
+            'error': str(e),
             'checks': {}
         }), 500
+
 
 @app.route('/api/health', methods=['GET'])
 def health():
     return jsonify({
-        'status': 'ok' if checker else 'error',
-        'error': import_error
+        'status': 'ok' if checker else 'fallback',
+        'checker_loaded': checker is not None,
+        'error': import_error,
+        'python_path': sys.path[:3]
     })
 
-# Vercel handler
+
+# For Vercel
 handler = app
