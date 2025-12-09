@@ -62,22 +62,6 @@ async function handleValidation() {
     setLoadingState(true);
     
     try {
-        // Check if backend is running first
-        const isBackendRunning = await checkBackendHealth();
-        
-        if (!isBackendRunning) {
-            // Show helpful error message with instructions
-            showError(`🚨 Backend server is not running!
-            
-📝 To start the backend:
-1. Open a terminal
-2. Navigate to: E:\\Personal Projects\\MailSpectre\\backend
-3. Run: python app.py
-
-The server should start on http://localhost:5000`);
-            return;
-        }
-        
         // Make API request
         const result = await validateEmail(email);
         
@@ -90,13 +74,9 @@ The server should start on http://localhost:5000`);
     } catch (error) {
         console.error('Validation error:', error);
         
-        // Better error message for connection issues
+        // Show generic error message without exposing backend details
         if (error.message.includes('connect') || error.message.includes('fetch')) {
-            showError(`❌ Cannot connect to backend server.
-            
-Please start the backend by running:
-cd "E:\\Personal Projects\\MailSpectre\\backend"
-python app.py`);
+            showError('Unable to validate email. Please try again later.');
         } else {
             showError(error.message || 'An error occurred during validation');
         }
@@ -400,11 +380,12 @@ function updateBackendStatus(isRunning) {
     const statusIndicator = document.getElementById('backendStatus');
     if (statusIndicator) {
         if (isRunning) {
-            statusIndicator.innerHTML = '🟢 Backend Online';
+            statusIndicator.innerHTML = '🟢 Ready';
             statusIndicator.className = 'text-xs text-accent-lime';
         } else {
-            statusIndicator.innerHTML = '🔴 Backend Offline';
-            statusIndicator.className = 'text-xs text-accent-red';
+            // Hide status when offline instead of showing red
+            statusIndicator.innerHTML = '';
+            statusIndicator.className = 'text-xs text-white/40';
         }
     }
 }
