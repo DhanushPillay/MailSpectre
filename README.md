@@ -2,6 +2,8 @@
 
 MailSpectre is a production-ready email validation tool that checks if an email address is real or fake using multiple free validation techniques. Built with Python Flask backend and vanilla JavaScript frontend.
 
+🌐 **Live Demo:** [https://mail-spectre.vercel.app/](https://mail-spectre.vercel.app/)
+
 ![MailSpectre](https://img.shields.io/badge/Status-Production%20Ready-success)
 ![Python](https://img.shields.io/badge/Python-3.11-blue)
 ![Flask](https://img.shields.io/badge/Flask-3.0-green)
