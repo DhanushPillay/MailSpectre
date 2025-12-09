@@ -19,27 +19,30 @@ def add_cors_headers(response):
 
 def basic_validate(email):
     """Basic email validation"""
-    result = {
-        'valid': False,
-        'email': email,
-        'checks': {}
-    }
+    checks = []
+    is_valid = False
     
     # Basic format check
     email_regex = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
     if re.match(email_regex, email):
-        result['valid'] = True
-        result['checks']['format'] = {
-            'passed': True,
+        is_valid = True
+        checks.append({
+            'check': 'format',
+            'valid': True,
             'message': 'Valid email format'
-        }
+        })
     else:
-        result['checks']['format'] = {
-            'passed': False,
+        checks.append({
+            'check': 'format',
+            'valid': False,
             'message': 'Invalid email format'
-        }
+        })
     
-    return result
+    return {
+        'valid': is_valid,
+        'email': email,
+        'checks': checks
+    }
 
 
 @app.route('/api/validate', methods=['POST', 'OPTIONS'])
