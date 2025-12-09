@@ -257,6 +257,7 @@ function createCheckCard(check) {
     
     // Special handling for data breach warnings
     if (check.check === 'data_breach' && !check.valid && check.breach_count) {
+        card.className = 'group relative flex flex-col overflow-hidden rounded-xl border border-accent-red/50 bg-accent-red/10 p-5 transition-all duration-300 hover:border-accent-red/70 hover:bg-accent-red/20';
         card.innerHTML = `
             <div class="flex items-start justify-between">
                 <h3 class="font-medium text-white">${checkName}</h3>
@@ -267,9 +268,31 @@ function createCheckCard(check) {
             <div class="mt-auto pt-3">
                 <p class="text-sm font-medium ${textColor}">${check.message}</p>
                 <p class="mt-1 text-xs text-white/60">${check.details}</p>
-                <div class="mt-2 rounded-lg bg-accent-red/10 border border-accent-red/30 px-3 py-2">
+                <div class="mt-2 rounded-lg bg-accent-red/20 border border-accent-red/40 px-3 py-2">
                     <p class="text-xs text-accent-red font-bold">⚠️ Found in ${check.breach_count} data breach(es)</p>
-                    <p class="text-xs text-white/60 mt-1">Recommend changing password immediately</p>
+                    <p class="text-xs text-white/60 mt-1">🔒 Recommend changing password immediately</p>
+                </div>
+            </div>
+        `;
+        return card;
+    }
+    
+    // Special handling for fraud database warnings
+    if (check.check === 'fraud_database' && !check.valid) {
+        card.className = 'group relative flex flex-col overflow-hidden rounded-xl border border-accent-red/50 bg-accent-red/10 p-5 transition-all duration-300 hover:border-accent-red/70 hover:bg-accent-red/20';
+        card.innerHTML = `
+            <div class="flex items-start justify-between">
+                <h3 class="font-medium text-white">${checkName}</h3>
+                <div class="flex h-7 w-7 items-center justify-center rounded-full ${iconBg} ${iconColor}">
+                    <span class="material-symbols-outlined text-xl">dangerous</span>
+                </div>
+            </div>
+            <div class="mt-auto pt-3">
+                <p class="text-sm font-medium ${textColor}">${check.message}</p>
+                <p class="mt-1 text-xs text-white/60">${check.details}</p>
+                <div class="mt-2 rounded-lg bg-accent-red/20 border border-accent-red/40 px-3 py-2">
+                    <p class="text-xs text-accent-red font-bold">🚨 FRAUD ALERT</p>
+                    <p class="text-xs text-white/60 mt-1">This email is flagged as fraudulent/spam</p>
                 </div>
             </div>
         `;

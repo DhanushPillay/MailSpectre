@@ -14,14 +14,19 @@ MailSpectre is designed to help developers and businesses verify email addresses
 
 ### Key Features
 
-MailSpectre performs **6 comprehensive validation checks** on every email:
+MailSpectre performs **11 comprehensive validation checks** on every email:
 
 1. **📝 Format Validation** - Validates email format using RFC 5322 compliant regex
-2. **🌐 Domain Existence** - Checks if the domain exists via DNS lookup
-3. **📬 MX Records** - Verifies mail servers are properly configured
-4. **🗑️ Disposable Detection** - Identifies temporary/disposable email providers
-5. **🔍 Pattern Analysis** - Detects suspicious patterns in email addresses
-6. **🚨 Fraud Database Check** - Cross-references against 1,300+ known fraudulent emails and verifies legitimate company addresses
+2. **🎓 Email Type Classification** - Identifies student, work, personal, or temporary emails
+3. **✍️ Typo Detection** - Catches and suggests corrections for common domain typos
+4. **🌐 Domain Existence** - Checks if the domain exists via DNS lookup
+5. **📬 MX Records** - Verifies mail servers are properly configured
+6. **🗑️ Disposable Detection** - Identifies temporary/disposable email providers
+7. **⚠️ Suspicious TLD Detection** - Flags risky domain extensions used for spam/phishing
+8. **🔍 Pattern Analysis** - Detects suspicious patterns in email addresses
+9. **👤 Username Quality Analysis** - Analyzes username for fraud indicators with risk scoring
+10. **🔐 Data Breach Check** - Checks if email was compromised using Have I Been Pwned API
+11. **🚨 Fraud Database Check** - Cross-references against 1,300+ known fraudulent emails and verifies legitimate company addresses
 
 ### Additional Highlights
 - **Clean UI:** Modern dark theme interface with real-time results.
@@ -56,7 +61,11 @@ MailSpectre uses a multi-layered approach to validate emails without sending a s
 - **Mechanism:** Analyzes the local part (before `@`) for bot-like patterns.
 - **What it checks:** Flags emails like `test12345@`, `qwerty@`, or random character strings often used by bots.
 
-### 6. Fraud Database Check
+### 6. Data Breach Detection
+- **Mechanism:** Uses Have I Been Pwned API with SHA-1 hashing for privacy (k-anonymity model).
+- **What it checks:** Determines if the email has been compromised in known data breaches. Checks against 600+ million compromised accounts without exposing the actual email.
+
+### 7. Fraud Database Check
 - **Mechanism:** Cross-references email against CSV databases of 1,300+ known fraudulent emails and 200+ verified company contacts.
 - **What it checks:** Instantly flags known spam/scam emails and validates legitimate corporate addresses. Also checks if the domain has been associated with fraudulent activity.
 
@@ -74,10 +83,14 @@ While MailSpectre is production-ready, here are concrete improvements planned fo
 - [ ] **Migrate to SQL Database:** Move from CSV to SQLite/PostgreSQL for better performance and scalability.
 
 ### Advanced Validation Features
+- [x] **Data Breach Detection:** ✅ **IMPLEMENTED** - Integration with Have I Been Pwned API to check compromised accounts.
+- [x] **Typo Correction:** ✅ **IMPLEMENTED** - Suggests corrections for common typos (e.g., `gmial.com` → `gmail.com`).
+- [x] **Email Type Classification:** ✅ **IMPLEMENTED** - Identifies student, work, personal, or temporary emails with confidence scores.
+- [x] **Suspicious TLD Detection:** ✅ **IMPLEMENTED** - Flags risky domain extensions commonly used for spam/phishing.
+- [x] **Username Quality Analysis:** ✅ **IMPLEMENTED** - Advanced pattern analysis with risk scoring system.
 - [ ] **SMTP Handshake Verification:** Connect to mail servers and perform `RCPT TO` checks to verify if specific mailboxes actually exist (without sending emails).
 - [ ] **Catch-All Domain Detection:** Identify domains configured to accept all email addresses (common false positives).
 - [ ] **Role-Based Email Detection:** Flag generic business emails (`admin@`, `support@`, `noreply@`) vs personal accounts.
-- [ ] **Typo Correction:** Suggest corrections for common typos (e.g., `gmial.com` → `gmail.com`).
 
 ### Performance & Scalability
 - [ ] **Redis Caching Layer:** Cache validation results for frequently checked domains to reduce API response time.

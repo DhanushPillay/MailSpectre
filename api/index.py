@@ -1,10 +1,10 @@
 """
 Vercel serverless function handler for MailSpectre backend
-Full validation with all checks
+Note: This is a simplified version for serverless. 
+For full features, use backend/app.py on Render.
 """
 from flask import Flask, request, jsonify
 import re
-import hashlib
 
 # Create Flask app
 app = Flask(__name__)
