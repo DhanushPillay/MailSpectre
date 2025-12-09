@@ -28,12 +28,19 @@ MailSpectre performs **11 comprehensive validation checks** on every email:
 10. **🔐 Data Breach Check** - Checks if email was compromised using Have I Been Pwned API
 11. **🚨 Fraud Database Check** - Cross-references against 1,300+ known fraudulent emails and verifies legitimate company addresses
 
+### Security & Safety Features
+- **🔐 Data Breach Detection:** Integration with Have I Been Pwned (600M+ breached accounts)
+- **🚨 Fraud Database:** 1,300+ known fraudulent emails + 200+ verified company contacts
+- **⚠️ Risk Scoring:** Advanced username analysis with 12+ fraud indicators
+- **🛡️ Phishing Protection:** Flags suspicious TLDs commonly used for spam/phishing
+- **✍️ Typo Protection:** Suggests corrections for common domain typos
+
 ### Additional Highlights
-- **Clean UI:** Modern dark theme interface with real-time results.
-- **Privacy Focused:** No data storage - all checks performed in real-time.
-- **Developer Friendly:** Simple REST API for batch validation.
-- **Zero Cost:** Uses DNS and algorithmic checks, no paid services needed.
-- **Fraud Detection:** Built-in database of known spam/fraud emails and verified company contacts.
+- **Clean UI:** Modern dark theme interface with real-time results and visual indicators
+- **Privacy Focused:** No data storage - all checks performed in real-time with k-anonymity for breaches
+- **Developer Friendly:** Simple REST API for single and batch validation
+- **Zero Cost:** Uses DNS, algorithmic checks, and free APIs - no paid services needed
+- **Production Ready:** Comprehensive error handling, CORS support, and detailed logging
 
 ---
 
@@ -97,20 +104,62 @@ While MailSpectre is production-ready, here are concrete improvements planned fo
 - [ ] **Rate Limiting & Throttling:** Implement token bucket or sliding window rate limiting per IP/API key.
 - [ ] **Async Processing Queue:** Use Celery/RQ for handling batch validations asynchronously.
 
-### Data Sources & Intelligence
-- [ ] **Integration with Public Blocklists:** Sync with community-maintained disposable email lists (Stopforumspam, Disposable Email Blocklist).
-- [ ] **Machine Learning Model:** Train an ML classifier on patterns to detect new disposable/fake email services automatically.
-- [ ] **Domain Reputation Score:** Cross-reference domains with spam databases and reputation services.
-
----
-
 ## 📖 Documentation
 
-- **[Installation Guide](INSTALLATION.md)** - Setup instructions for local development.
-- **[Testing Guide](TESTING.md)** - Unit and integration testing procedures.
+Comprehensive documentation is available in the `docs/` directory:
+
+- **[Installation Guide](docs/INSTALLATION.md)** - Setup instructions for local development
+- **[Testing Guide](docs/TESTING.md)** - Unit and integration testing procedures
+- **[Safety Features](docs/SAFETY_FEATURES.md)** - Detailed security and fraud detection documentation
+- **[Email Types](docs/EMAIL_TYPES.md)** - Email classification system explained
+- **[Algorithm Details](docs/ALGORITHM.md)** - Deep dive into validation algorithms
+- **[Quick Reference](docs/QUICK_REFERENCE.md)** - Quick API reference and examples
+- **[Deployment Guide](docs/DEPLOYMENT.md)** - Production deployment instructions
 
 ---
 
+## 🔌 API Overview
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/validate` | POST | Validate a single email address with complete analysis |
+| `/api/batch-validate` | POST | Validate multiple emails (up to 50 per request) |
+| `/api/health` | GET | Check service health status |
+
+### Example Request
+
+```bash
+curl -X POST https://mailspectre-api.onrender.com/api/validate \
+  -H "Content-Type: application/json" \
+  -d '{"email": "user@example.com"}'
+```
+
+### Example Response
+
+```json
+{
+  "email": "user@example.com",
+  "valid": true,
+  "score": 91.67,
+  "summary": "Email looks valid with minor concerns",
+  "checks": [
+    {
+      "check": "format",
+      "valid": true,
+      "message": "Valid email format"
+    },
+    {
+      "check": "data_breach",
+      "valid": true,
+      "message": "No known data breaches"
+    },
+    {
+      "check": "fraud_database",
+      "valid": true,
+      "message": "Not in fraud database"
+    }
+  ]
+}
 ## 🔌 API Overview
 
 | Endpoint | Method | Description |
