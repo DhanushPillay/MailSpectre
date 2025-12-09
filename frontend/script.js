@@ -181,6 +181,108 @@ function createCheckCard(check) {
     const icon = isValid ? 'check' : 'close';
     const textColor = isValid ? 'text-accent-lime' : 'text-accent-red';
     
+    // Special handling for email_type check - always show as informational
+    if (check.check === 'email_type') {
+        card.className = 'group relative flex flex-col overflow-hidden rounded-xl border border-accent-cyan/30 bg-accent-cyan/10 p-5 transition-all duration-300 hover:border-accent-cyan/60 hover:bg-accent-cyan/20';
+        
+        // Email type badges with emojis
+        const typeBadges = {
+            'student': { emoji: '🎓', label: 'Student', color: 'bg-purple-500/20 text-purple-300', border: 'border-purple-500/40' },
+            'work': { emoji: '💼', label: 'Work', color: 'bg-blue-500/20 text-blue-300', border: 'border-blue-500/40' },
+            'personal': { emoji: '👤', label: 'Personal', color: 'bg-green-500/20 text-green-300', border: 'border-green-500/40' },
+            'temporary': { emoji: '⏱️', label: 'Temporary', color: 'bg-orange-500/20 text-orange-300', border: 'border-orange-500/40' },
+            'unknown': { emoji: '❓', label: 'Unknown', color: 'bg-gray-500/20 text-gray-300', border: 'border-gray-500/40' }
+        };
+        
+        const typeInfo = typeBadges[check.email_type] || typeBadges['unknown'];
+        const confidenceColor = check.confidence >= 90 ? 'text-accent-lime' : 
+                               check.confidence >= 75 ? 'text-accent-cyan' : 
+                               check.confidence >= 60 ? 'text-yellow-400' : 'text-orange-400';
+        
+        card.innerHTML = `
+            <div class="flex items-start justify-between mb-2">
+                <h3 class="font-medium text-white">Email Type</h3>
+                <div class="flex h-7 w-7 items-center justify-center rounded-full bg-accent-cyan/20 text-accent-cyan">
+                    <span class="material-symbols-outlined text-xl">info</span>
+                </div>
+            </div>
+            <div class="flex items-center gap-2 mb-2">
+                <span class="inline-flex items-center gap-1.5 rounded-lg border ${typeInfo.border} ${typeInfo.color} px-3 py-1.5 text-sm font-semibold">
+                    <span>${typeInfo.emoji}</span>
+                    <span>${typeInfo.label}</span>
+                </span>
+                <span class="text-xs ${confidenceColor} font-medium">${check.confidence}%</span>
+            </div>
+            <p class="text-xs text-white/70 mt-2">${check.details}</p>
+            ${check.company ? `<p class="text-xs text-accent-cyan font-medium mt-1">🏢 ${check.company}</p>` : ''}
+        `;
+        
+        return card;
+    }
+    
+    // Special handling for typo suggestions
+    if (check.check === 'typo_detection' && check.suggestion) {
+        card.innerHTML = `
+            <div class="flex items-start justify-between">
+                <h3 class="font-medium text-white">${checkName}</h3>
+                <div class="flex h-7 w-7 items-center justify-center rounded-full ${iconBg} ${iconColor}">
+                    <span class="material-symbols-outlined text-xl">${icon}</span>
+                </div>
+            </div>
+            <div class="mt-auto pt-3">
+                <p class="text-sm font-medium ${textColor}">${check.message}</p>
+                <p class="mt-1 text-xs text-white/60">${check.details}</p>
+                <div class="mt-2 rounded-lg bg-accent-cyan/10 border border-accent-cyan/30 px-3 py-2">
+                    <p class="text-xs text-accent-cyan font-medium">💡 Did you mean: ${check.suggestion}</p>
+                </div>
+            </div>
+        `;
+        return card;
+    }
+    
+    // Special handling for data breach warnings
+    if (check.check === 'data_breach' && !check.valid && check.breach_count) {
+        card.innerHTML = `
+            <div class="flex items-start justify-between">
+                <h3 class="font-medium text-white">${checkName}</h3>
+                <div class="flex h-7 w-7 items-center justify-center rounded-full ${iconBg} ${iconColor}">
+                    <span class="material-symbols-outlined text-xl">warning</span>
+                </div>
+            </div>
+            <div class="mt-auto pt-3">
+                <p class="text-sm font-medium ${textColor}">${check.message}</p>
+                <p class="mt-1 text-xs text-white/60">${check.details}</p>
+                <div class="mt-2 rounded-lg bg-accent-red/10 border border-accent-red/30 px-3 py-2">
+                    <p class="text-xs text-accent-red font-bold">⚠️ Found in ${check.breach_count} data breach(es)</p>
+                    <p class="text-xs text-white/60 mt-1">Recommend changing password immediately</p>
+                </div>
+            </div>
+        `;
+        return card;
+    }
+    
+    // Special handling for suspicious TLD
+    if (check.check === 'suspicious_tld' && !check.valid && check.tld) {
+        card.innerHTML = `
+            <div class="flex items-start justify-between">
+                <h3 class="font-medium text-white">${checkName}</h3>
+                <div class="flex h-7 w-7 items-center justify-center rounded-full ${iconBg} ${iconColor}">
+                    <span class="material-symbols-outlined text-xl">warning</span>
+                </div>
+            </div>
+            <div class="mt-auto pt-3">
+                <p class="text-sm font-medium ${textColor}">${check.message}</p>
+                <p class="mt-1 text-xs text-white/60">${check.details}</p>
+                <div class="mt-2 rounded-lg bg-orange-500/10 border border-orange-500/30 px-3 py-2">
+                    <p class="text-xs text-orange-400 font-medium">⚠️ Domain uses ${check.tld}</p>
+                    <p class="text-xs text-white/60 mt-1">Often associated with spam/phishing</p>
+                </div>
+            </div>
+        `;
+        return card;
+    }
+    
+    // Default card for other checks
     card.className = `group relative flex flex-col overflow-hidden rounded-xl border border-white/10 bg-white/5 p-5 transition-all duration-300 ${borderColor} ${bgColor}`;
     
     card.innerHTML = `

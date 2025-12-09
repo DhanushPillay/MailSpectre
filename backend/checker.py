@@ -1,12 +1,15 @@
 """
 Email validation checker module for MailSpectre.
 Performs multiple validation checks without using paid APIs.
+Includes safety checks for phishing, breaches, and malicious domains.
 """
 
 import re
 import dns.resolver
 import csv
 import os
+import hashlib
+import requests
 from pathlib import Path
 from urllib.parse import urlparse
 
@@ -54,6 +57,62 @@ class EmailChecker:
         'gmail.com', 'yahoo.com', 'hotmail.com', 'outlook.com', 'live.com',
         'msn.com', 'aol.com', 'icloud.com', 'protonmail.com', 'mail.com',
         'yahoo.co.uk', 'yahoo.ca', 'yahoo.fr', 'hotmail.co.uk', 'googlemail.com'
+    }
+    
+    # Suspicious/risky TLDs often used for spam and phishing
+    SUSPICIOUS_TLDS = {
+        '.tk', '.ml', '.ga', '.cf', '.gq',  # Free domains from Freenom
+        '.xyz', '.top', '.work', '.click', '.link',  # Cheap, often abused
+        '.download', '.racing', '.loan', '.win', '.bid',  # Commonly used for spam
+        '.stream', '.science', '.party', '.review', '.trade'
+    }
+    
+    # Educational institution domains (common patterns)
+    EDU_DOMAINS = {
+        '.edu', '.ac.uk', '.edu.au', '.edu.in', '.edu.cn', '.edu.sg',
+        '.ac.in', '.ac.jp', '.edu.my', '.edu.pk', '.edu.bd', '.edu.np',
+        '.ac.za', '.edu.eg', '.edu.sa', '.edu.ae', '.ac.nz', '.ac.th'
+    }
+    
+    # Common student email patterns
+    STUDENT_PATTERNS = [
+        r'student\d*@',
+        r's\d{6,}@',  # s123456@university.edu
+        r'u\d{6,}@',  # u123456@university.edu
+        r'\d{4,}@.*\.edu',  # 2023001@university.edu
+        r'[a-z]+\d{2,4}@.*\.edu'  # john23@university.edu
+    ]
+    
+    # Work email indicators
+    WORK_EMAIL_KEYWORDS = {
+        'info', 'contact', 'support', 'admin', 'sales', 'help', 'service',
+        'team', 'office', 'business', 'corporate', 'hr', 'recruitment',
+        'careers', 'jobs', 'enquiry', 'inquiry', 'customercare', 'feedback'
+    }
+    
+    # Common domain typos mapping
+    DOMAIN_TYPOS = {
+        'gmial.com': 'gmail.com',
+        'gmai.com': 'gmail.com',
+        'gmil.com': 'gmail.com',
+        'gmail.co': 'gmail.com',
+        'gmail.cm': 'gmail.com',
+        'gmaill.com': 'gmail.com',
+        'yahooo.com': 'yahoo.com',
+        'yaho.com': 'yahoo.com',
+        'yahoo.co': 'yahoo.com',
+        'hotmial.com': 'hotmail.com',
+        'hotmal.com': 'hotmail.com',
+        'hotmail.co': 'hotmail.com',
+        'outlok.com': 'outlook.com',
+        'outloo.com': 'outlook.com',
+        'outlook.co': 'outlook.com',
+        'protonmail.co': 'protonmail.com',
+        'protonmal.com': 'protonmail.com',
+        'iclood.com': 'icloud.com',
+        'icloud.co': 'icloud.com',
+        'aoll.com': 'aol.com',
+        'aol.co': 'aol.com'
     }
     
     def __init__(self):
@@ -503,6 +562,207 @@ class EmailChecker:
                 'issues': []
             }
     
+    def check_data_breach(self, email: str) -> dict:
+        """
+        Check if email has been involved in data breaches using Have I Been Pwned API.
+        This is a FREE service that helps identify compromised accounts.
+        
+        Args:
+            email: Email address to check
+            
+        Returns:
+            dict: Breach check result
+        """
+        try:
+            # Have I Been Pwned API - check for breaches
+            # Using SHA-1 hash for privacy (k-anonymity)
+            sha1_hash = hashlib.sha1(email.lower().encode()).hexdigest().upper()
+            prefix = sha1_hash[:5]
+            suffix = sha1_hash[5:]
+            
+            url = f'https://api.pwnedpasswords.com/range/{prefix}'
+            
+            try:
+                response = requests.get(url, timeout=5, headers={
+                    'User-Agent': 'MailSpectre-Email-Validator'
+                })
+                
+                if response.status_code == 200:
+                    # Check if our hash suffix appears in the response
+                    hashes = response.text.split('\n')
+                    for hash_line in hashes:
+                        if hash_line.startswith(suffix):
+                            # Email found in breach database
+                            count = hash_line.split(':')[1].strip()
+                            return {
+                                'check': 'data_breach',
+                                'valid': False,
+                                'message': 'Email found in data breaches',
+                                'details': f'This email appears in known data breaches. Account may be compromised.',
+                                'breach_count': int(count)
+                            }
+                    
+                    # Not found in breaches
+                    return {
+                        'check': 'data_breach',
+                        'valid': True,
+                        'message': 'No known data breaches',
+                        'details': 'Email not found in known breach databases'
+                    }
+                else:
+                    # API unavailable
+                    return {
+                        'check': 'data_breach',
+                        'valid': True,
+                        'message': 'Breach check unavailable',
+                        'details': 'Could not verify breach status (API unavailable)'
+                    }
+                    
+            except requests.RequestException:
+                return {
+                    'check': 'data_breach',
+                    'valid': True,
+                    'message': 'Breach check unavailable',
+                    'details': 'Could not connect to breach database'
+                }
+                
+        except Exception as e:
+            return {
+                'check': 'data_breach',
+                'valid': True,
+                'message': 'Breach check error',
+                'details': str(e)
+            }
+    
+    def check_suspicious_tld(self, email: str) -> dict:
+        """
+        Check if email domain uses a suspicious/risky top-level domain.
+        These TLDs are often used for spam, phishing, and malicious activities.
+        
+        Args:
+            email: Email address to check
+            
+        Returns:
+            dict: TLD safety check result
+        """
+        try:
+            domain = email.split('@')[1].lower()
+            
+            # Check if domain ends with any suspicious TLD
+            is_suspicious = any(domain.endswith(tld) for tld in self.SUSPICIOUS_TLDS)
+            
+            if is_suspicious:
+                matching_tld = next(tld for tld in self.SUSPICIOUS_TLDS if domain.endswith(tld))
+                return {
+                    'check': 'suspicious_tld',
+                    'valid': False,
+                    'message': 'Risky domain extension detected',
+                    'details': f'Domain uses {matching_tld} which is commonly associated with spam and phishing.',
+                    'tld': matching_tld
+                }
+            else:
+                return {
+                    'check': 'suspicious_tld',
+                    'valid': True,
+                    'message': 'Domain extension looks safe',
+                    'details': 'TLD is not commonly associated with spam or malicious activity'
+                }
+                
+        except IndexError:
+            return {
+                'check': 'suspicious_tld',
+                'valid': False,
+                'message': 'Invalid email format',
+                'details': 'Cannot extract domain from email'
+            }
+        except Exception as e:
+            return {
+                'check': 'suspicious_tld',
+                'valid': True,
+                'message': 'TLD check error',
+                'details': str(e)
+            }
+    
+    def check_typo_suggestions(self, email: str) -> dict:
+        """
+        Check for common typos in email domains and suggest corrections.
+        Helps users catch mistakes before sending to wrong address.
+        
+        Args:
+            email: Email address to check
+            
+        Returns:
+            dict: Typo detection result with suggestions
+        """
+        try:
+            username, domain = email.split('@')
+            domain = domain.lower()
+            
+            # Common domain typos mapped to correct domains
+            typo_map = {
+                # Gmail typos
+                'gmial.com': 'gmail.com',
+                'gmai.com': 'gmail.com',
+                'gmil.com': 'gmail.com',
+                'gmaill.com': 'gmail.com',
+                'gmail.co': 'gmail.com',
+                
+                # Yahoo typos
+                'yahooo.com': 'yahoo.com',
+                'yaho.com': 'yahoo.com',
+                'yaahoo.com': 'yahoo.com',
+                'yhoo.com': 'yahoo.com',
+                'yahoo.co': 'yahoo.com',
+                
+                # Hotmail/Outlook typos
+                'hotmial.com': 'hotmail.com',
+                'hotmai.com': 'hotmail.com',
+                'hotmaill.com': 'hotmail.com',
+                'outlok.com': 'outlook.com',
+                'outloo.com': 'outlook.com',
+                'outlookk.com': 'outlook.com',
+                
+                # Other common typos
+                'live.co': 'live.com',
+                'aol.co': 'aol.com',
+                'icloud.co': 'icloud.com',
+            }
+            
+            if domain in typo_map:
+                correct_domain = typo_map[domain]
+                suggested_email = f'{username}@{correct_domain}'
+                return {
+                    'check': 'typo_detection',
+                    'valid': False,
+                    'message': 'Possible typo detected',
+                    'details': f'Did you mean {suggested_email}?',
+                    'suggestion': suggested_email,
+                    'typo': domain,
+                    'correct': correct_domain
+                }
+            else:
+                return {
+                    'check': 'typo_detection',
+                    'valid': True,
+                    'message': 'No common typos detected',
+                    'details': 'Domain appears to be correct'
+                }
+                
+        except ValueError:
+            return {
+                'check': 'typo_detection',
+                'valid': False,
+                'message': 'Invalid email format',
+                'details': 'Cannot parse email address'
+            }
+        except Exception as e:
+            return {
+                'check': 'typo_detection',
+                'valid': True,
+                'message': 'Typo check error',
+                'details': str(e)
+            }
+    
     def check_fraud_database(self, email: str) -> dict:
         """
         Check if email exists in the fraud database.
@@ -565,6 +825,142 @@ class EmailChecker:
                 'details': str(e)
             }
     
+    def classify_email_type(self, email: str) -> dict:
+        """
+        Classify the type of email: student, work, personal, etc.
+        
+        Args:
+            email: Email address to classify
+            
+        Returns:
+            dict: Classification result with type and confidence
+        """
+        try:
+            email_lower = email.strip().lower()
+            parts = email_lower.split('@')
+            
+            if len(parts) != 2:
+                return {
+                    'check': 'email_type',
+                    'valid': True,
+                    'message': 'Unable to classify',
+                    'email_type': 'unknown',
+                    'confidence': 0,
+                    'details': 'Invalid email format'
+                }
+            
+            username, domain = parts
+            types_detected = []
+            confidence_scores = {}
+            
+            # 1. Check for Educational Email (.edu domains)
+            for edu_domain in self.EDU_DOMAINS:
+                if domain.endswith(edu_domain):
+                    types_detected.append('student')
+                    confidence_scores['student'] = 95
+                    break
+            
+            # 2. Check for Student Patterns
+            if not types_detected:
+                for pattern in self.STUDENT_PATTERNS:
+                    if re.search(pattern, email_lower):
+                        types_detected.append('student')
+                        confidence_scores['student'] = 85
+                        break
+            
+            # 3. Check if it's a Verified Company Email
+            if email_lower in self.legitimate_companies:
+                types_detected.append('work')
+                confidence_scores['work'] = 100
+                company = self.legitimate_companies[email_lower]
+                return {
+                    'check': 'email_type',
+                    'valid': True,
+                    'message': f'Verified work email',
+                    'email_type': 'work',
+                    'confidence': 100,
+                    'details': f'Official email for {company}',
+                    'company': company
+                }
+            
+            # 4. Check for Work Email Indicators
+            if not types_detected:
+                username_parts = username.replace('.', '_').replace('-', '_').split('_')
+                for keyword in self.WORK_EMAIL_KEYWORDS:
+                    if keyword in username_parts or keyword == username:
+                        types_detected.append('work')
+                        confidence_scores['work'] = 75
+                        break
+            
+            # 5. Check for Personal Email (Major Providers)
+            if not types_detected:
+                if domain in self.MAJOR_PROVIDERS:
+                    # Check if username looks like a person's name
+                    if '.' in username or len(username) >= 5:
+                        types_detected.append('personal')
+                        confidence_scores['personal'] = 80
+                    else:
+                        types_detected.append('personal')
+                        confidence_scores['personal'] = 60
+            
+            # 6. Check for Custom Domain (likely work email)
+            if not types_detected:
+                # Not a major provider and not .edu = likely custom business domain
+                if domain not in self.DISPOSABLE_DOMAINS and not any(domain.endswith(tld) for tld in self.SUSPICIOUS_TLDS):
+                    types_detected.append('work')
+                    confidence_scores['work'] = 70
+            
+            # 7. Disposable/Temporary Email
+            if domain in self.DISPOSABLE_DOMAINS:
+                types_detected = ['temporary']
+                confidence_scores['temporary'] = 95
+            
+            # 8. Default to personal if nothing else detected
+            if not types_detected:
+                types_detected.append('personal')
+                confidence_scores['personal'] = 50
+            
+            # Get the primary type (highest confidence)
+            primary_type = types_detected[0]
+            confidence = confidence_scores.get(primary_type, 50)
+            
+            # Build detailed message
+            type_labels = {
+                'student': '🎓 Student Email',
+                'work': '💼 Work/Business Email',
+                'personal': '👤 Personal Email',
+                'temporary': '⏱️ Temporary/Disposable Email',
+                'unknown': '❓ Unknown Type'
+            }
+            
+            details_info = {
+                'student': 'Educational institution email address',
+                'work': 'Corporate or business email address',
+                'personal': 'Personal email from major provider',
+                'temporary': 'Temporary or disposable email service',
+                'unknown': 'Unable to determine email type'
+            }
+            
+            return {
+                'check': 'email_type',
+                'valid': True,
+                'message': type_labels.get(primary_type, 'Unknown'),
+                'email_type': primary_type,
+                'confidence': confidence,
+                'details': details_info.get(primary_type, 'No additional information'),
+                'all_types': types_detected if len(types_detected) > 1 else None
+            }
+            
+        except Exception as e:
+            return {
+                'check': 'email_type',
+                'valid': True,
+                'message': 'Classification error',
+                'email_type': 'unknown',
+                'confidence': 0,
+                'details': str(e)
+            }
+    
     def validate_email(self, email: str) -> dict:
         """
         Perform all validation checks on an email address.
@@ -589,11 +985,15 @@ class EmailChecker:
         # Perform all checks
         checks = [
             self.validate_format(email),
+            self.classify_email_type(email),  # NEW: Classify email type
+            self.check_typo_suggestions(email),  # Typo detection & suggestions
             self.check_domain_exists(email),
             self.check_mx_records(email),
             self.check_disposable(email),
+            self.check_suspicious_tld(email),  # Check for risky domain extensions
             self.check_suspicious_patterns(email),
-            self.check_username_quality(email),  # New advanced check
+            self.check_username_quality(email),  # Pattern analysis
+            self.check_data_breach(email),  # Check if email was breached
             self.check_fraud_database(email)
         ]
         
