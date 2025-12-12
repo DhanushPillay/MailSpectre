@@ -26,19 +26,19 @@ let currentResult = null;
 function init() {
     // Validate button click
     elements.validateBtn.addEventListener('click', handleValidation);
-    
+
     // Enter key in input
     elements.emailInput.addEventListener('keypress', (e) => {
         if (e.key === 'Enter') {
             handleValidation();
         }
     });
-    
+
     // Clear input on focus if empty
     elements.emailInput.addEventListener('focus', () => {
         hideError();
     });
-    
+
     console.log('MailSpectre initialized');
 }
 
@@ -47,33 +47,33 @@ function init() {
  */
 async function handleValidation() {
     const email = elements.emailInput.value.trim();
-    
+
     // Basic validation
     if (!email) {
         showError('Please enter an email address');
         return;
     }
-    
+
     // Hide previous results
     hideResults();
     hideError();
-    
+
     // Show loading state
     setLoadingState(true);
-    
+
     try {
         // Make API request
         const result = await validateEmail(email);
-        
+
         // Store result
         currentResult = result;
-        
+
         // Display results
         displayResults(result);
-        
+
     } catch (error) {
         console.error('Validation error:', error);
-        
+
         // Show generic error message without exposing backend details
         if (error.message.includes('connect') || error.message.includes('fetch')) {
             showError('Unable to validate email. Please try again later.');
@@ -93,7 +93,7 @@ async function handleValidation() {
 async function validateEmail(email) {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), CONFIG.REQUEST_TIMEOUT);
-    
+
     try {
         const response = await fetch(`${CONFIG.API_BASE_URL}${CONFIG.API_ENDPOINT}`, {
             method: 'POST',
@@ -103,9 +103,9 @@ async function validateEmail(email) {
             body: JSON.stringify({ email }),
             signal: controller.signal
         });
-        
+
         clearTimeout(timeoutId);
-        
+
         // Check if response is JSON
         const contentType = response.headers.get('content-type');
         if (!contentType || !contentType.includes('application/json')) {
@@ -113,26 +113,26 @@ async function validateEmail(email) {
             console.error('Non-JSON response:', text.substring(0, 200));
             throw new Error('Server returned invalid response. Please try again later.');
         }
-        
+
         const data = await response.json();
-        
+
         if (!response.ok) {
             throw new Error(data.message || data.error || 'Validation failed');
         }
-        
+
         return data;
-        
+
     } catch (error) {
         clearTimeout(timeoutId);
-        
+
         if (error.name === 'AbortError') {
             throw new Error('Request timeout. Please try again.');
         }
-        
+
         if (error.message.includes('fetch')) {
             throw new Error('Cannot connect to validation server. Make sure the backend is running.');
         }
-        
+
         throw error;
     }
 }
@@ -144,7 +144,7 @@ async function validateEmail(email) {
 function displayResults(result) {
     // Show results section
     elements.resultsSection.classList.remove('hidden');
-    
+
     // Overall status
     if (result.valid) {
         elements.overallStatus.textContent = 'VALID';
@@ -153,10 +153,10 @@ function displayResults(result) {
         elements.overallStatus.textContent = 'INVALID';
         elements.overallStatus.className = 'mt-2 text-4xl font-bold text-accent-red drop-shadow-[0_0_15px_rgba(255,65,54,0.7)]';
     }
-    
+
     // Checks
     displayChecks(result.checks);
-    
+
     // Scroll to results
     elements.resultsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
@@ -168,7 +168,7 @@ function displayResults(result) {
 function displayChecks(checks) {
     // Clear existing checks
     elements.checksGrid.innerHTML = '';
-    
+
     // Create check cards
     checks.forEach(check => {
         const checkCard = createCheckCard(check);
@@ -183,10 +183,10 @@ function displayChecks(checks) {
  */
 function createCheckCard(check) {
     const card = document.createElement('div');
-    
+
     // Format check name
     const checkName = check.check.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
-    
+
     // Determine styles based on validity
     const isValid = check.valid;
     const borderColor = isValid ? 'hover:border-accent-lime/80' : 'hover:border-accent-red/80';
@@ -195,11 +195,11 @@ function createCheckCard(check) {
     const iconBg = isValid ? 'bg-accent-lime/20' : 'bg-accent-red/20';
     const icon = isValid ? 'check' : 'close';
     const textColor = isValid ? 'text-accent-lime' : 'text-accent-red';
-    
+
     // Special handling for email_type check - always show as informational
     if (check.check === 'email_type') {
         card.className = 'group relative flex flex-col overflow-hidden rounded-xl border border-accent-cyan/30 bg-accent-cyan/10 p-5 transition-all duration-300 hover:border-accent-cyan/60 hover:bg-accent-cyan/20';
-        
+
         // Email type badges with emojis
         const typeBadges = {
             'student': { emoji: '🎓', label: 'Student', color: 'bg-purple-500/20 text-purple-300', border: 'border-purple-500/40' },
@@ -208,12 +208,12 @@ function createCheckCard(check) {
             'temporary': { emoji: '⏱️', label: 'Temporary', color: 'bg-orange-500/20 text-orange-300', border: 'border-orange-500/40' },
             'unknown': { emoji: '❓', label: 'Unknown', color: 'bg-gray-500/20 text-gray-300', border: 'border-gray-500/40' }
         };
-        
+
         const typeInfo = typeBadges[check.email_type] || typeBadges['unknown'];
-        const confidenceColor = check.confidence >= 90 ? 'text-accent-lime' : 
-                               check.confidence >= 75 ? 'text-accent-cyan' : 
-                               check.confidence >= 60 ? 'text-yellow-400' : 'text-orange-400';
-        
+        const confidenceColor = check.confidence >= 90 ? 'text-accent-lime' :
+            check.confidence >= 75 ? 'text-accent-cyan' :
+                check.confidence >= 60 ? 'text-yellow-400' : 'text-orange-400';
+
         card.innerHTML = `
             <div class="flex items-start justify-between mb-2">
                 <h3 class="font-medium text-white">Email Type</h3>
@@ -231,10 +231,10 @@ function createCheckCard(check) {
             <p class="text-xs text-white/70 mt-2">${check.details}</p>
             ${check.company ? `<p class="text-xs text-accent-cyan font-medium mt-1">🏢 ${check.company}</p>` : ''}
         `;
-        
+
         return card;
     }
-    
+
     // Special handling for typo suggestions
     if (check.check === 'typo_detection' && check.suggestion) {
         card.innerHTML = `
@@ -254,7 +254,7 @@ function createCheckCard(check) {
         `;
         return card;
     }
-    
+
     // Special handling for data breach warnings
     if (check.check === 'data_breach' && !check.valid && check.breach_count) {
         card.className = 'group relative flex flex-col overflow-hidden rounded-xl border border-accent-red/50 bg-accent-red/10 p-5 transition-all duration-300 hover:border-accent-red/70 hover:bg-accent-red/20';
@@ -276,7 +276,7 @@ function createCheckCard(check) {
         `;
         return card;
     }
-    
+
     // Special handling for fraud database warnings
     if (check.check === 'fraud_database' && !check.valid) {
         card.className = 'group relative flex flex-col overflow-hidden rounded-xl border border-accent-red/50 bg-accent-red/10 p-5 transition-all duration-300 hover:border-accent-red/70 hover:bg-accent-red/20';
@@ -298,7 +298,114 @@ function createCheckCard(check) {
         `;
         return card;
     }
-    
+
+    // Special handling for SMTP mailbox verification
+    if (check.check === 'smtp_mailbox') {
+        // Mailbox verified successfully
+        if (check.valid && check.message === 'Mailbox verified') {
+            card.className = 'group relative flex flex-col overflow-hidden rounded-xl border border-accent-lime/50 bg-accent-lime/10 p-5 transition-all duration-300 hover:border-accent-lime/70 hover:bg-accent-lime/20';
+            card.innerHTML = `
+                <div class="flex items-start justify-between">
+                    <h3 class="font-medium text-white">SMTP Verification</h3>
+                    <div class="flex h-7 w-7 items-center justify-center rounded-full bg-accent-lime/20 text-accent-lime">
+                        <span class="material-symbols-outlined text-xl">verified</span>
+                    </div>
+                </div>
+                <div class="mt-auto pt-3">
+                    <p class="text-sm font-medium text-accent-lime">${check.message}</p>
+                    <p class="mt-1 text-xs text-white/60">${check.details}</p>
+                    <div class="mt-2 rounded-lg bg-accent-lime/20 border border-accent-lime/40 px-3 py-2">
+                        <p class="text-xs text-accent-lime font-bold">✅ Mailbox confirmed to exist</p>
+                        <p class="text-xs text-white/60 mt-1">Server responded with code ${check.smtp_code || 250}</p>
+                    </div>
+                </div>
+            `;
+            return card;
+        }
+
+        // Catch-all domain detected
+        if (check.is_catch_all === true) {
+            card.className = 'group relative flex flex-col overflow-hidden rounded-xl border border-accent-yellow/50 bg-accent-yellow/10 p-5 transition-all duration-300 hover:border-accent-yellow/70 hover:bg-accent-yellow/20';
+            card.innerHTML = `
+                <div class="flex items-start justify-between">
+                    <h3 class="font-medium text-white">SMTP Verification</h3>
+                    <div class="flex h-7 w-7 items-center justify-center rounded-full bg-accent-yellow/20 text-accent-yellow">
+                        <span class="material-symbols-outlined text-xl">all_inbox</span>
+                    </div>
+                </div>
+                <div class="mt-auto pt-3">
+                    <p class="text-sm font-medium text-accent-yellow">${check.message}</p>
+                    <p class="mt-1 text-xs text-white/60">${check.details}</p>
+                    <div class="mt-2 rounded-lg bg-accent-yellow/20 border border-accent-yellow/40 px-3 py-2">
+                        <p class="text-xs text-accent-yellow font-bold">⚠️ Catch-All Domain</p>
+                        <p class="text-xs text-white/60 mt-1">Domain accepts all email addresses</p>
+                    </div>
+                </div>
+            `;
+            return card;
+        }
+
+        // Mailbox doesn't exist
+        if (!check.valid && check.message === 'Mailbox does not exist') {
+            card.className = 'group relative flex flex-col overflow-hidden rounded-xl border border-accent-red/50 bg-accent-red/10 p-5 transition-all duration-300 hover:border-accent-red/70 hover:bg-accent-red/20';
+            card.innerHTML = `
+                <div class="flex items-start justify-between">
+                    <h3 class="font-medium text-white">SMTP Verification</h3>
+                    <div class="flex h-7 w-7 items-center justify-center rounded-full bg-accent-red/20 text-accent-red">
+                        <span class="material-symbols-outlined text-xl">cancel</span>
+                    </div>
+                </div>
+                <div class="mt-auto pt-3">
+                    <p class="text-sm font-medium text-accent-red">${check.message}</p>
+                    <p class="mt-1 text-xs text-white/60">${check.details}</p>
+                    <div class="mt-2 rounded-lg bg-accent-red/20 border border-accent-red/40 px-3 py-2">
+                        <p class="text-xs text-accent-red font-bold">❌ Email does NOT exist</p>
+                        <p class="text-xs text-white/60 mt-1">Mail server confirmed: address invalid</p>
+                    </div>
+                </div>
+            `;
+            return card;
+        }
+
+        // Major provider (blocked from verification)
+        if (check.provider_blocked) {
+            card.className = 'group relative flex flex-col overflow-hidden rounded-xl border border-accent-blue/30 bg-accent-blue/10 p-5 transition-all duration-300 hover:border-accent-blue/50 hover:bg-accent-blue/15';
+            card.innerHTML = `
+                <div class="flex items-start justify-between">
+                    <h3 class="font-medium text-white">SMTP Verification</h3>
+                    <div class="flex h-7 w-7 items-center justify-center rounded-full bg-accent-blue/20 text-accent-blue">
+                        <span class="material-symbols-outlined text-xl">shield</span>
+                    </div>
+                </div>
+                <div class="mt-auto pt-3">
+                    <p class="text-sm font-medium text-accent-blue">${check.message}</p>
+                    <p class="mt-1 text-xs text-white/60">${check.details}</p>
+                    <div class="mt-2 rounded-lg bg-accent-blue/10 border border-accent-blue/30 px-3 py-2">
+                        <p class="text-xs text-accent-blue font-medium">🛡️ Security Feature</p>
+                        <p class="text-xs text-white/60 mt-1">Major providers block SMTP verification</p>
+                    </div>
+                </div>
+            `;
+            return card;
+        }
+
+        // Default SMTP card (inconclusive)
+        card.className = `group relative flex flex-col overflow-hidden rounded-xl border border-white/10 bg-white/5 p-5 transition-all duration-300 ${borderColor} ${bgColor}`;
+        card.innerHTML = `
+            <div class="flex items-start justify-between">
+                <h3 class="font-medium text-white">SMTP Verification</h3>
+                <div class="flex h-7 w-7 items-center justify-center rounded-full ${iconBg} ${iconColor}">
+                    <span class="material-symbols-outlined text-xl">mail</span>
+                </div>
+            </div>
+            <div class="mt-auto pt-3">
+                <p class="text-sm font-medium ${textColor}">${check.message}</p>
+                <p class="mt-1 text-xs text-white/60">${check.details}</p>
+            </div>
+        `;
+        return card;
+    }
+
     // Special handling for suspicious TLD
     if (check.check === 'suspicious_tld' && !check.valid && check.tld) {
         card.innerHTML = `
@@ -319,10 +426,10 @@ function createCheckCard(check) {
         `;
         return card;
     }
-    
+
     // Default card for other checks
     card.className = `group relative flex flex-col overflow-hidden rounded-xl border border-white/10 bg-white/5 p-5 transition-all duration-300 ${borderColor} ${bgColor}`;
-    
+
     card.innerHTML = `
         <div class="flex items-start justify-between">
             <h3 class="font-medium text-white">${checkName}</h3>
@@ -335,7 +442,7 @@ function createCheckCard(check) {
             <p class="mt-1 text-xs text-white/60">${check.details}</p>
         </div>
     `;
-    
+
     return card;
 }
 
@@ -369,7 +476,7 @@ function hideResults() {
 function setLoadingState(isLoading) {
     elements.validateBtn.disabled = isLoading;
     elements.emailInput.disabled = isLoading;
-    
+
     const btnSpan = elements.validateBtn.querySelector('span');
     if (isLoading) {
         btnSpan.textContent = 'Inspecting...';
@@ -389,7 +496,7 @@ async function checkBackendHealth() {
             method: 'GET',
             signal: AbortSignal.timeout(2000)
         });
-        
+
         if (response.ok) {
             console.log('✓ Backend is running');
             updateBackendStatus(true);
@@ -425,7 +532,7 @@ function updateBackendStatus(isRunning) {
 document.addEventListener('DOMContentLoaded', () => {
     init();
     checkBackendHealth();
-    
+
     // Check backend status every 10 seconds
     setInterval(checkBackendHealth, 10000);
 });

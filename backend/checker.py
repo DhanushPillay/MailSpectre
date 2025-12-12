@@ -825,6 +825,222 @@ class EmailChecker:
                 'details': str(e)
             }
     
+    def check_smtp_mailbox(self, email: str) -> dict:
+        """
+        Verify if the actual mailbox exists using SMTP handshake.
+        This performs a real check against the mail server without sending an email.
+        
+        The process:
+        1. Connect to the domain's mail server (from MX records)
+        2. Initiate SMTP handshake with HELO/EHLO
+        3. Specify a sender with MAIL FROM
+        4. Try the recipient with RCPT TO
+        5. Check response code - 250 means mailbox exists
+        
+        Also detects catch-all domains that accept all emails.
+        
+        Args:
+            email: Email address to verify
+            
+        Returns:
+            dict: Verification result with status and details
+        """
+        import smtplib
+        import socket
+        import uuid
+        
+        try:
+            domain = email.split('@')[1].lower()
+            
+            # Get MX records for the domain
+            try:
+                mx_records = list(self.dns_resolver.resolve(domain, 'MX'))
+                if not mx_records:
+                    return {
+                        'check': 'smtp_mailbox',
+                        'valid': False,
+                        'message': 'No mail servers found',
+                        'details': f'Domain {domain} has no MX records',
+                        'smtp_code': None,
+                        'is_catch_all': False
+                    }
+                
+                # Sort by preference and get the primary mail server
+                mx_records.sort(key=lambda x: x.preference)
+                mx_host = str(mx_records[0].exchange).rstrip('.')
+                
+            except Exception as e:
+                return {
+                    'check': 'smtp_mailbox',
+                    'valid': True,  # Can't verify, assume valid
+                    'message': 'MX lookup failed',
+                    'details': f'Could not resolve mail server: {str(e)}',
+                    'smtp_code': None,
+                    'is_catch_all': None
+                }
+            
+            # Skip SMTP check for major providers (they block this)
+            # These providers are known to reject SMTP verification attempts
+            blocked_providers = {
+                'gmail.com', 'googlemail.com', 'yahoo.com', 'yahoo.co.uk',
+                'outlook.com', 'hotmail.com', 'live.com', 'msn.com',
+                'icloud.com', 'me.com', 'aol.com', 'protonmail.com',
+                'proton.me', 'zoho.com', 'yandex.com', 'mail.ru'
+            }
+            
+            if domain in blocked_providers:
+                return {
+                    'check': 'smtp_mailbox',
+                    'valid': True,
+                    'message': 'Major provider - SMTP check skipped',
+                    'details': f'{domain} blocks SMTP verification (security feature)',
+                    'smtp_code': None,
+                    'is_catch_all': None,
+                    'provider_blocked': True
+                }
+            
+            # Perform SMTP verification
+            smtp_timeout = 10  # seconds
+            
+            try:
+                # Connect to mail server
+                server = smtplib.SMTP(timeout=smtp_timeout)
+                server.set_debuglevel(0)  # Disable debug output
+                
+                try:
+                    server.connect(mx_host, 25)
+                except Exception:
+                    # Try port 587 as fallback
+                    try:
+                        server.connect(mx_host, 587)
+                    except Exception as conn_error:
+                        return {
+                            'check': 'smtp_mailbox',
+                            'valid': True,  # Can't connect, assume valid
+                            'message': 'SMTP connection failed',
+                            'details': f'Could not connect to {mx_host}',
+                            'smtp_code': None,
+                            'is_catch_all': None
+                        }
+                
+                # Send HELO/EHLO
+                try:
+                    server.ehlo('mailspectre.com')
+                except Exception:
+                    server.helo('mailspectre.com')
+                
+                # Specify sender
+                server.mail('verify@mailspectre.com')
+                
+                # Try the actual email address
+                code, message = server.rcpt(email)
+                
+                # Also check a random address to detect catch-all domains
+                random_email = f"mailspectre-catchall-test-{uuid.uuid4().hex[:8]}@{domain}"
+                catchall_code, _ = server.rcpt(random_email)
+                
+                # Clean up
+                try:
+                    server.quit()
+                except Exception:
+                    pass
+                
+                # Analyze results
+                is_catch_all = catchall_code == 250
+                mailbox_exists = code == 250
+                
+                # Decode message if bytes
+                if isinstance(message, bytes):
+                    message = message.decode('utf-8', errors='ignore')
+                
+                if is_catch_all:
+                    # Catch-all domain - accepts all emails
+                    return {
+                        'check': 'smtp_mailbox',
+                        'valid': True,
+                        'message': 'Catch-all domain detected',
+                        'details': f'Domain accepts all emails - cannot verify specific mailbox',
+                        'smtp_code': code,
+                        'is_catch_all': True
+                    }
+                elif mailbox_exists:
+                    # Mailbox exists!
+                    return {
+                        'check': 'smtp_mailbox',
+                        'valid': True,
+                        'message': 'Mailbox verified',
+                        'details': 'SMTP verification confirms mailbox exists',
+                        'smtp_code': code,
+                        'is_catch_all': False
+                    }
+                else:
+                    # Mailbox doesn't exist
+                    return {
+                        'check': 'smtp_mailbox',
+                        'valid': False,
+                        'message': 'Mailbox does not exist',
+                        'details': f'Mail server rejected the address (code {code})',
+                        'smtp_code': code,
+                        'smtp_message': message[:100] if message else None,
+                        'is_catch_all': False
+                    }
+                    
+            except smtplib.SMTPServerDisconnected:
+                return {
+                    'check': 'smtp_mailbox',
+                    'valid': True,
+                    'message': 'Server disconnected',
+                    'details': 'Mail server closed connection (may block verification)',
+                    'smtp_code': None,
+                    'is_catch_all': None
+                }
+            except smtplib.SMTPConnectError:
+                return {
+                    'check': 'smtp_mailbox',
+                    'valid': True,
+                    'message': 'SMTP connection refused',
+                    'details': f'Could not connect to {mx_host}',
+                    'smtp_code': None,
+                    'is_catch_all': None
+                }
+            except socket.timeout:
+                return {
+                    'check': 'smtp_mailbox',
+                    'valid': True,
+                    'message': 'SMTP timeout',
+                    'details': f'Connection to {mx_host} timed out',
+                    'smtp_code': None,
+                    'is_catch_all': None
+                }
+            except socket.gaierror:
+                return {
+                    'check': 'smtp_mailbox',
+                    'valid': True,
+                    'message': 'DNS resolution failed',
+                    'details': f'Could not resolve {mx_host}',
+                    'smtp_code': None,
+                    'is_catch_all': None
+                }
+                
+        except IndexError:
+            return {
+                'check': 'smtp_mailbox',
+                'valid': False,
+                'message': 'Invalid email format',
+                'details': 'Cannot extract domain from email',
+                'smtp_code': None,
+                'is_catch_all': None
+            }
+        except Exception as e:
+            return {
+                'check': 'smtp_mailbox',
+                'valid': True,  # Assume valid if check fails
+                'message': 'SMTP check error',
+                'details': str(e),
+                'smtp_code': None,
+                'is_catch_all': None
+            }
+    
     def classify_email_type(self, email: str) -> dict:
         """
         Classify the type of email: student, work, personal, etc.
@@ -985,10 +1201,11 @@ class EmailChecker:
         # Perform all checks
         checks = [
             self.validate_format(email),
-            self.classify_email_type(email),  # NEW: Classify email type
+            self.classify_email_type(email),  # Classify email type
             self.check_typo_suggestions(email),  # Typo detection & suggestions
             self.check_domain_exists(email),
             self.check_mx_records(email),
+            self.check_smtp_mailbox(email),  # NEW: SMTP mailbox verification
             self.check_disposable(email),
             self.check_suspicious_tld(email),  # Check for risky domain extensions
             self.check_suspicious_patterns(email),
@@ -1003,8 +1220,8 @@ class EmailChecker:
         score = (valid_checks / total_checks) * 100
         
         # Determine overall validity
-        # Email is considered valid if it passes format, domain, and MX checks
-        critical_checks = ['format', 'domain_exists', 'mx_records', 'fraud_database']
+        # Email is considered valid if it passes format, domain, MX, SMTP, and fraud checks
+        critical_checks = ['format', 'domain_exists', 'mx_records', 'smtp_mailbox', 'fraud_database']
         critical_passed = all(
             check['valid'] for check in checks 
             if check['check'] in critical_checks

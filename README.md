@@ -16,21 +16,24 @@ MailSpectre is designed to help developers and businesses verify email addresses
 
 ### Key Features
 
-MailSpectre performs **11 comprehensive validation checks** on every email:
+MailSpectre performs **12 comprehensive validation checks** on every email:
 
 1. **Format Validation** - Validates email format using RFC 5322 compliant regex
 2. **Email Type Classification** - Identifies student, work, personal, or temporary emails
 3. **Typo Detection** - Catches and suggests corrections for common domain typos
 4. **Domain Existence** - Checks if the domain exists via DNS lookup
 5. **MX Records** - Verifies mail servers are properly configured
-6. **Disposable Detection** - Identifies temporary/disposable email providers
-7. **Suspicious TLD Detection** - Flags risky domain extensions used for spam/phishing
-8. **Pattern Analysis** - Detects suspicious patterns in email addresses
-9. **Username Quality Analysis** - Analyzes username for fraud indicators with risk scoring
-10. **Data Breach Check** - Checks if email was compromised using Have I Been Pwned API
-11. **Fraud Database Check** - Cross-references against 1,300+ known fraudulent emails and verifies legitimate company addresses
+6. **SMTP Mailbox Verification** - **NEW!** Verifies if the actual mailbox exists without sending an email
+7. **Disposable Detection** - Identifies temporary/disposable email providers
+8. **Suspicious TLD Detection** - Flags risky domain extensions used for spam/phishing
+9. **Pattern Analysis** - Detects suspicious patterns in email addresses
+10. **Username Quality Analysis** - Analyzes username for fraud indicators with risk scoring
+11. **Data Breach Check** - Checks if email was compromised using Have I Been Pwned API
+12. **Fraud Database Check** - Cross-references against 1,300+ known fraudulent emails and verifies legitimate company addresses
 
 ### Security & Safety Features
+- **SMTP Verification:** Confirms if the actual mailbox exists on the mail server
+- **Catch-All Detection:** Identifies domains that accept all email addresses
 - **Data Breach Detection:** Integration with Have I Been Pwned (600M+ breached accounts)
 - **Fraud Database:** 1,300+ known fraudulent emails + 200+ verified company contacts
 - **Risk Scoring:** Advanced username analysis with 12+ fraud indicators
