@@ -260,12 +260,12 @@ def validate_email(email):
         }
     
     # Run remaining checks
+    checks.append(classify_email_type(email))
+    checks.append(check_typo_suggestion(email))
     checks.append(check_disposable(email))
     checks.append(check_suspicious_tld(email))
-    checks.append(check_typo_suggestion(email))
     checks.append(check_suspicious_patterns(email))
     checks.append(check_username_quality(email))
-    checks.append(classify_email_type(email))
     
     # Calculate overall validity
     critical_checks = ['format', 'disposable', 'suspicious_tld']
