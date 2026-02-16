@@ -149,6 +149,31 @@ MailSpectre now includes **comprehensive safety checks** to determine if an emai
 
 ---
 
+### 9. **SMTP Deep Verification** 📨
+**What it does:** Connects to the mail server to verify if the mailbox actually exists.
+
+**How it works:**
+- Connects to the MX server
+- Sends HELO/EHLO handshake
+- Checks `RCPT TO` response
+- Detects if user `unknown123` is rejected
+
+**Why it matters:**
+- **The only way** to know if an email actually exists without sending one
+- Catches typos that match valid patterns but don't exist
+
+---
+
+### 10. **Catch-All Domain Detection** 🎣
+**What it does:** Identifies if a domain accepts ALL emails, even for non-existent users.
+
+**Why it matters:**
+- "Valid" emails on catch-all domains might not reach a real person
+- High risk for bounce rates later
+- Common configuration for spam traps
+
+---
+
 ## 🎯 Overall Safety Score
 
 Each email gets a **safety score** (0-100%) based on:
@@ -172,6 +197,8 @@ Email is marked **UNSAFE** if:
 3. ✗ Username risk score > 50
 4. ✗ Domain doesn't exist
 5. ✗ No mail servers configured
+6. ✗ Disposable email provider detected
+7. ✗ SMTP check confirms mailbox does not exist
 
 ---
 
