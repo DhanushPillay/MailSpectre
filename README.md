@@ -27,10 +27,13 @@ MailSpectre performs **11 comprehensive validation checks** on every email:
 7. **Suspicious TLD Detection** - Flags risky domain extensions used for spam/phishing
 8. **Pattern Analysis** - Detects suspicious patterns in email addresses
 9. **Username Quality Analysis** - Analyzes username for fraud indicators with risk scoring
-10. **Data Breach Check** - Checks if email was compromised using Have I Been Pwned API
-11. **Fraud Database Check** - Cross-references against 1,300+ known fraudulent emails and verifies legitimate company addresses
+130. **Data Breach Check** - Checks if email was compromised using Have I Been Pwned API
+31. **Fraud Database Check** - Cross-references against 1,300+ known fraudulent emails and verifies legitimate company addresses
+32. **SMTP Deep Check** - Connects to mail servers to verify if the mailbox actually exists
+33. **Catch-All Detection** - Identifies domains that accept emails for non-existent users
 
 ### Security & Safety Features
+- **Deep Verification:** Direct SMTP handshake to confirm mailbox existence
 - **Data Breach Detection:** Integration with Have I Been Pwned (600M+ breached accounts)
 - **Fraud Database:** 1,300+ known fraudulent emails + 200+ verified company contacts
 - **Risk Scoring:** Advanced username analysis with 12+ fraud indicators
@@ -63,8 +66,8 @@ MailSpectre uses a multi-layered approach to validate emails without sending a s
 - **What it checks:** Confirms that the domain is configured to receive emails. If no mail server is listed, the email cannot exist.
 
 ### 4. Disposable Email Detection
-- **Mechanism:** Checks the domain against a curated blacklist of known temporary email providers (e.g., TempMail, GuerrillaMail).
-- **What it checks:** Prevents users from signing up with throwaway accounts.
+- **Mechanism:** Checks the domain against a massive curated list of 250+ known temporary email providers (e.g., Mailinator, TempMail).
+- **What it checks:** Prevents users from signing up with throwaway accounts using a hard-fail policy.
 
 ### 5. Suspicious Pattern Analysis
 - **Mechanism:** Analyzes the local part (before `@`) for bot-like patterns.
@@ -77,6 +80,14 @@ MailSpectre uses a multi-layered approach to validate emails without sending a s
 ### 7. Fraud Database Check
 - **Mechanism:** Cross-references email against CSV databases of 1,300+ known fraudulent emails and 200+ verified company contacts.
 - **What it checks:** Instantly flags known spam/scam emails and validates legitimate corporate addresses. Also checks if the domain has been associated with fraudulent activity.
+
+### 8. SMTP Deep Verification ("Ping" Check)
+- **Mechanism:** Connects to the target mail server and performs the SMTP handshake (`HELO`, `MAIL FROM`, `RCPT TO`) without sending `DATA`.
+- **What it checks:** Verifies if the specific mailbox user actually exists on the server. This catches cases where the domain is valid but the user `random123` does not exist.
+
+### 9. Catch-All Domain Detection
+- **Mechanism:** Probes the server with a random, non-existent email address (e.g., `sadf876asd@domain.com`).
+- **What it checks:** Detection if the server accepts *everything*. If it accepts a non-existent email, it's a "Catch-All" domain, meaning any email sends to it might technically "deliver" but not reach a real person. This is often flagged as risky.
 
 ---
 
@@ -97,8 +108,8 @@ While MailSpectre is production-ready, here are concrete improvements planned fo
 - [x] **Email Type Classification:** **IMPLEMENTED** - Identifies student, work, personal, or temporary emails with confidence scores.
 - [x] **Suspicious TLD Detection:** **IMPLEMENTED** - Flags risky domain extensions commonly used for spam/phishing.
 - [x] **Username Quality Analysis:** **IMPLEMENTED** - Advanced pattern analysis with risk scoring system.
-- [ ] **SMTP Handshake Verification:** Connect to mail servers and perform `RCPT TO` checks to verify if specific mailboxes actually exist (without sending emails).
-- [ ] **Catch-All Domain Detection:** Identify domains configured to accept all email addresses (common false positives).
+- [x] **SMTP Handshake Verification:** **IMPLEMENTED** - Connect to mail servers and perform `RCPT TO` checks to verify if specific mailboxes actually exist.
+- [x] **Catch-All Domain Detection:** **IMPLEMENTED** - Identify domains configured to accept all email addresses.
 - [ ] **Role-Based Email Detection:** Flag generic business emails (`admin@`, `support@`, `noreply@`) vs personal accounts.
 
 ### Performance & Scalability
