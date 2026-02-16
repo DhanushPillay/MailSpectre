@@ -10,6 +10,10 @@ import csv
 import os
 import hashlib
 import requests
+import smtplib
+import socket
+import random
+import string
 from pathlib import Path
 from urllib.parse import urlparse
 
@@ -21,13 +25,8 @@ class EmailChecker:
     """
     
     # List of known disposable email domains
-    DISPOSABLE_DOMAINS = {
-        'tempmail.com', 'guerrillamail.com', '10minutemail.com', 'mailinator.com',
-        'throwaway.email', 'temp-mail.org', 'fakeinbox.com', 'maildrop.cc',
-        'getnada.com', 'trashmail.com', 'yopmail.com', 'sharklasers.com',
-        'guerrillamailblock.com', 'grr.la', 'mintemail.com', 'tempmail.net',
-        'dispostable.com', 'mailnesia.com', 'spambox.us', 'mohmal.com'
-    }
+    # List of known disposable email domains - will be loaded from file
+    DISPOSABLE_DOMAINS = set()
     
     # Suspicious patterns that might indicate fake emails
     SUSPICIOUS_PATTERNS = [
@@ -60,11 +59,14 @@ class EmailChecker:
     }
     
     # Suspicious/risky TLDs often used for spam and phishing
+    # Suspicious/risky TLDs often used for spam and phishing
     SUSPICIOUS_TLDS = {
         '.tk', '.ml', '.ga', '.cf', '.gq',  # Free domains from Freenom
         '.xyz', '.top', '.work', '.click', '.link',  # Cheap, often abused
         '.download', '.racing', '.loan', '.win', '.bid',  # Commonly used for spam
-        '.stream', '.science', '.party', '.review', '.trade'
+        '.stream', '.science', '.party', '.review', '.trade',
+        '.biz', '.info', '.cam', '.icu', '.site', '.online', '.website',
+        '.space', '.pro', '.club', '.vip', '.kim', '.mom', '.lol'
     }
     
     # Educational institution domains (common patterns)
@@ -122,9 +124,36 @@ class EmailChecker:
         self.dns_resolver.lifetime = 5
         
         # Load fraud database
+        # Load fraud database
         self.fraud_emails = self._load_fraud_database()
         self.fraud_domains = self._extract_domains_from_fraud()
         self.legitimate_companies = self._load_company_database()
+        
+        # Load disposable domains
+        self.DISPOSABLE_DOMAINS = self._load_disposable_domains()
+
+    def _load_disposable_domains(self) -> set:
+        """
+        Load disposable domains from text file.
+        
+        Returns:
+            set: Set of disposable domains
+        """
+        domains = set()
+        try:
+            data_path = Path(__file__).parent / 'DATA' / 'disposable_domains.txt'
+            if data_path.exists():
+                with open(data_path, 'r', encoding='utf-8') as f:
+                    for line in f:
+                        domain = line.strip().lower()
+                        if domain:
+                            domains.add(domain)
+                print(f"[OK] Loaded {len(domains)} disposable domains")
+            else:
+                print(f"[WARNING] Disposable domains list not found at {data_path}")
+        except Exception as e:
+            print(f"[WARNING] Error loading disposable domains: {e}")
+        return domains
     
     def _load_fraud_database(self) -> set:
         """
@@ -190,6 +219,138 @@ class EmailChecker:
         except Exception as e:
             print(f"[WARNING] Error loading company database: {e}")
         return companies
+
+    def check_smtp_mailbox(self, email: str) -> dict:
+        """
+        Deep check: Connect to mail server and verify mailbox exists.
+        Simulates sending an email without actually sending it (RCPT TO check).
+        
+        Args:
+            email: Email address to check
+            
+        Returns:
+            dict: Validation result
+        """
+        try:
+            domain = email.split('@')[1]
+            mx_records = self.dns_resolver.resolve(domain, 'MX')
+            mx_record = str(mx_records[0].exchange)
+            
+            # Connect to mail server
+            server = smtplib.SMTP(timeout=5)
+            server.set_debuglevel(0)
+            
+            try:
+                server.connect(mx_record)
+                server.helo(server.local_hostname)  # Identify ourselves
+                server.mail('validate@mailspectre.com')  # Fake sender
+                code, message = server.rcpt(email)
+                server.quit()
+                
+                if code == 250:
+                    return {
+                        'check': 'smtp_mailbox',
+                        'valid': True,
+                        'message': 'Mailbox exists',
+                        'details': 'SMTP server confirmed mailbox exists'
+                    }
+                elif code == 550:
+                    return {
+                        'check': 'smtp_mailbox',
+                        'valid': False,
+                        'message': 'Mailbox does not exist',
+                        'details': 'SMTP server rejected the email address'
+                    }
+                else:
+                    return {
+                        'check': 'smtp_mailbox',
+                        'valid': True,  # Inconclusive/Greylisted, treat as valid to avoid false positives
+                        'message': 'SMTP check inconclusive',
+                        'details': f'Server responded with code {code}'
+                    }
+                    
+            except Exception as e:
+                try:
+                    server.quit()
+                except:
+                    pass
+                return {
+                    'check': 'smtp_mailbox',
+                    'valid': True,  # Connection failed, assume valid (soft fail)
+                    'message': 'SMTP connection failed',
+                    'details': str(e)
+                }
+                
+        except Exception as e:
+            return {
+                'check': 'smtp_mailbox',
+                'valid': True,
+                'message': 'SMTP check skipped',
+                'details': str(e)
+            }
+
+    def check_catch_all(self, email: str) -> dict:
+        """
+        Check if the domain is a catch-all (accepts all emails).
+        
+        Args:
+            email: Email to extract domain from
+            
+        Returns:
+            dict: Validation result
+        """
+        try:
+            domain = email.split('@')[1]
+            # Generate a random non-existent email
+            random_user = ''.join(random.choices(string.ascii_lowercase + string.digits, k=15))
+            test_email = f"{random_user}@{domain}"
+            
+            mx_records = self.dns_resolver.resolve(domain, 'MX')
+            mx_record = str(mx_records[0].exchange)
+            
+            server = smtplib.SMTP(timeout=5)
+            server.set_debuglevel(0)
+            
+            try:
+                server.connect(mx_record)
+                server.helo(server.local_hostname)
+                server.mail('validate@mailspectre.com')
+                code, _ = server.rcpt(test_email)
+                server.quit()
+                
+                # If server accepts a random email (250), it is a catch-all
+                is_catch_all = (code == 250)
+                
+                if is_catch_all:
+                    return {
+                        'check': 'catch_all',
+                        'valid': False,  # Catch-all is risky
+                        'message': 'Catch-all domain detected',
+                        'details': 'Domain accepts emails for non-existent users (high risk)'
+                    }
+                else:
+                    return {
+                        'check': 'catch_all',
+                        'valid': True,
+                        'message': 'Not a catch-all domain',
+                        'details': 'Domain rejects invalid emails (good)'
+                    }
+                    
+            except Exception:
+                return {
+                    'check': 'catch_all',
+                    'valid': True,
+                    'message': 'Catch-all check skipped',
+                    'details': 'Connection failed'
+                }
+                
+        except Exception as e:
+            return {
+                'check': 'catch_all',
+                'valid': True,
+                'message': 'Catch-all check error',
+                'details': str(e)
+            }
     
     def validate_format(self, email: str) -> dict:
         """
@@ -994,7 +1155,9 @@ class EmailChecker:
             self.check_suspicious_patterns(email),
             self.check_username_quality(email),  # Pattern analysis
             self.check_data_breach(email),  # Check if email was breached
-            self.check_fraud_database(email)
+            self.check_fraud_database(email),
+            self.check_smtp_mailbox(email),  # Deep check
+            self.check_catch_all(email)      # Catch-all check
         ]
         
         # Calculate validity score
@@ -1010,13 +1173,22 @@ class EmailChecker:
             if check['check'] in critical_checks
         )
         
-        # Extra penalty: if found in fraud database, automatically invalid
+        # Extra penalty: if found in fraud database, disposable, or confirmed non-existent, automatically invalid
         fraud_check = next((c for c in checks if c['check'] == 'fraud_database'), None)
         is_fraud = fraud_check and not fraud_check['valid']
         
+        disposable_check = next((c for c in checks if c['check'] == 'disposable'), None)
+        is_disposable = disposable_check and not disposable_check['valid']
+        
+        smtp_check = next((c for c in checks if c['check'] == 'smtp_mailbox'), None)
+        is_smtp_fail = smtp_check and not smtp_check['valid']
+        
+        # New Strict Validity Logic
+        is_valid = critical_passed and valid_checks >= 5 and not is_fraud and not is_disposable and not is_smtp_fail
+        
         return {
             'email': email,
-            'valid': critical_passed and valid_checks >= 5 and not is_fraud,  # At least 5 out of 6 checks
+            'valid': is_valid,
             'score': round(score, 2),
             'checks': checks,
             'summary': self._generate_summary(checks, score)
