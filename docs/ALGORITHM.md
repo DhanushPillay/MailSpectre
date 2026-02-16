@@ -111,6 +111,8 @@ The username quality check is integrated into the main validation pipeline along
 4. Disposable email detection
 5. **Username quality analysis** (NEW)
 6. Fraud database matching
+7. **SMTP Deep Verification** (NEW)
+8. **Catch-All Detection** (NEW)
 
 ## Database Reference
 
@@ -140,6 +142,5 @@ print(f"Score: {result['score']}%")
 
 1. Machine learning model trained on fraud patterns
 2. Domain reputation scoring
-3. Real-time API integration for enhanced detection
-4. Geographic pattern analysis
+3. Geographic pattern analysis
 5. Typosquatting detection for company domains
